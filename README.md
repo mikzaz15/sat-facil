@@ -51,6 +51,7 @@ Required for MVP:
 Optional:
 - `OPENAI_CHAT_MODEL` (default `gpt-4.1-mini`)
 - `OPENAI_EMBEDDING_MODEL` (default `text-embedding-3-small`)
+- `SAT_OFFICIAL_DOC_URLS_<TARGET_KEY>` (comma-separated official downloadable URLs per target, e.g. `SAT_OFFICIAL_DOC_URLS_ANEXO_20=...`)
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER`
 - `NEXT_PUBLIC_ENABLE_PAYMENTS=false` (payments are stubbed/flagged)
 
@@ -77,9 +78,21 @@ This applies:
 npm run seed:kb
 ```
 
-This runs `scripts/seed_kb.ts`, inserting starter SAT/gob.mx sources and embedded chunks into:
+This runs the SAT ingestion pipeline (`scripts/crawl_sat.ts` via `scripts/seed_kb.ts`) with:
+- local PDF preference (`sat_sources/pdfs/*.pdf`)
+- official downloadable docs (when configured/discoverable)
+- HTML fallback only when not blocked
+- idempotent re-ingestion (skips unchanged sources)
+
+It writes embedded chunks into:
 - `kb_sources`
 - `kb_chunks`
+
+Optional direct command:
+
+```bash
+npm run ingest:sat
+```
 
 4. Start dev server:
 
