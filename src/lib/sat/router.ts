@@ -10,6 +10,7 @@ const DEFAULT_ROUTER: RouterResult = {
 };
 const VALID_TOPICS = new Set<SatTopic>([
   "FACTURACION_CFDI",
+  "PAGOS_COMPLEMENTO",
   "RFC_EFIRMA",
   "RESICO",
   "DECLARACIONES_DEVOLUCION",
@@ -21,6 +22,11 @@ const EVASION_PATTERN =
   /evadir|evasi[oó]n|ocultar ingresos|factura falsa|facturas falsas|falsificar|simular operaciones|empresa fantasma/i;
 
 const TOPIC_RULES: Array<{ topic: SatTopic; pattern: RegExp }> = [
+  {
+    topic: "PAGOS_COMPLEMENTO",
+    pattern:
+      /complemento\s+de\s+pagos|recibo\s+de\s+pago|recepci[oó]n\s+de\s+pagos|pago\s+en\s+parcialidades|pago\s+diferido|pago\s+en\s+una\s+sola\s+exhibici[oó]n|\bppd\b|\bpue\b|doctorelacionado|numparcialidad|saldo\s+insoluto/i,
+  },
   {
     topic: "FACTURACION_CFDI",
     pattern:

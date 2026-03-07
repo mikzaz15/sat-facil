@@ -1,5 +1,6 @@
 export type SatTopic =
   | "FACTURACION_CFDI"
+  | "PAGOS_COMPLEMENTO"
   | "RFC_EFIRMA"
   | "RESICO"
   | "DECLARACIONES_DEVOLUCION"
@@ -24,6 +25,7 @@ export type RetrievedChunk = {
   url: string;
   title: string;
   publisher: string;
+  retrieval_reasons?: string[];
 };
 
 export type SourceCitation = {
@@ -34,7 +36,10 @@ export type SourceCitation = {
 
 export type StructuredAnswer = {
   summary: string;
+  satRule?: string;
   steps: string[];
+  practicalExample?: string;
+  commonErrors?: string[];
   confidence: ConfidenceLevel;
   sources: SourceCitation[];
   clarifyingQuestions?: string[];

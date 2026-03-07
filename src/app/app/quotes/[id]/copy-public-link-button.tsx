@@ -22,9 +22,9 @@ export function CopyPublicLinkButton({ url }: CopyPublicLinkButtonProps) {
         onClick={handleCopy}
         className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
-        Copy public link
+        Copiar enlace público
       </button>
-      {copied ? <span className="text-xs text-emerald-700">Copied</span> : null}
+      {copied ? <span className="text-xs text-emerald-700">Copiado</span> : null}
     </div>
   );
 }

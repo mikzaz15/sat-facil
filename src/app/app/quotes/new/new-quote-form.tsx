@@ -28,7 +28,7 @@ function roundMoney(value: number) {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "USD",
   }).format(value);
@@ -79,14 +79,14 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
       ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Client</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Cliente</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label
               htmlFor="client_name"
               className="block text-sm font-medium text-slate-700"
             >
-              Name
+              Nombre
             </label>
             <input
               id="client_name"
@@ -100,7 +100,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="client_email"
               className="block text-sm font-medium text-slate-700"
             >
-              Email
+              Correo electrónico
             </label>
             <input
               id="client_email"
@@ -114,7 +114,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="client_phone"
               className="block text-sm font-medium text-slate-700"
             >
-              Phone
+              Teléfono
             </label>
             <input
               id="client_phone"
@@ -127,7 +127,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="client_company"
               className="block text-sm font-medium text-slate-700"
             >
-              Company
+              Empresa
             </label>
             <input
               id="client_company"
@@ -140,13 +140,13 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Line items</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Conceptos</h2>
           <button
             type="button"
             onClick={() => setLineItems((prev) => [...prev, createItem()])}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
-            Add row
+            Agregar fila
           </button>
         </div>
 
@@ -154,10 +154,10 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
           <table className="w-full min-w-[600px] text-left">
             <thead className="text-xs uppercase tracking-[0.08em] text-slate-500">
               <tr>
-                <th className="pb-2 font-medium">Name</th>
-                <th className="pb-2 font-medium">Qty</th>
-                <th className="pb-2 font-medium">Unit price</th>
-                <th className="pb-2 font-medium">Line total</th>
+                <th className="pb-2 font-medium">Nombre</th>
+                <th className="pb-2 font-medium">Cantidad</th>
+                <th className="pb-2 font-medium">Precio unitario</th>
+                <th className="pb-2 font-medium">Total de línea</th>
                 <th className="pb-2 font-medium" />
               </tr>
             </thead>
@@ -179,7 +179,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
                           )
                         }
                         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                        placeholder="Design package"
+                        placeholder="Paquete de diseño"
                       />
                     </td>
                     <td className="py-2 pr-3">
@@ -243,7 +243,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
                         }
                         className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Remove
+                        Quitar
                       </button>
                     </td>
                   </tr>
@@ -255,7 +255,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Pricing</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Precios</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
@@ -263,7 +263,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="tax_percent_ui"
               className="block text-sm font-medium text-slate-700"
             >
-              Tax percent
+              Porcentaje de impuesto
             </label>
             <input
               id="tax_percent_ui"
@@ -281,7 +281,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="discount_amount_ui"
               className="block text-sm font-medium text-slate-700"
             >
-              Discount amount
+              Monto de descuento
             </label>
             <input
               id="discount_amount_ui"
@@ -301,7 +301,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
               htmlFor="deposit_percent_ui"
               className="block text-sm font-medium text-slate-700"
             >
-              Deposit percent
+              Porcentaje de anticipo
             </label>
             <input
               id="deposit_percent_ui"
@@ -326,7 +326,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
             <span className="font-medium">{formatMoney(calculations.subtotal)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Tax</span>
+            <span>Impuesto</span>
             <span className="font-medium">{formatMoney(calculations.tax)}</span>
           </div>
           <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-base">
@@ -343,7 +343,7 @@ export function NewQuoteForm({ action, error }: NewQuoteFormProps) {
           type="submit"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
         >
-          Save Quote
+          Guardar cotización
         </button>
       </div>
     </form>

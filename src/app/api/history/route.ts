@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, data: history });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
+    const message = error instanceof Error ? error.message : "Error inesperado";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

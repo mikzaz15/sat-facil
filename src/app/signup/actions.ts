@@ -5,34 +5,17 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/auth-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function workspaceNameFromEmail(email: string) {
-  const localPart = email.split("@")[0]?.trim();
-  if (!localPart) {
-    return "My Workspace";
-  }
-  return `${localPart}'s Workspace`;
-}
-
-async function bootstrapUserWorkspace(params: {
+async function ensureUserProfile(params: {
   userId: string;
   email: string;
   fullName: string | null;
 }) {
   const adminClient = createSupabaseServerClient();
 
-  const { data: existingMembership } = await adminClient
-    .from("workspace_members")
-    .select("workspace_id")
-    .eq("user_id", params.userId)
-    .maybeSingle();
-
-  if (existingMembership) {
-    return;
-  }
-
   const { error: profileError } = await adminClient.from("profiles").upsert(
     {
       id: params.userId,
+      email: params.email,
       full_name: params.fullName,
     },
     { onConflict: "id" },
@@ -40,31 +23,6 @@ async function bootstrapUserWorkspace(params: {
 
   if (profileError) {
     throw new Error(profileError.message);
-  }
-
-  const { data: workspace, error: workspaceError } = await adminClient
-    .from("workspaces")
-    .insert({
-      name: workspaceNameFromEmail(params.email),
-      owner_id: params.userId,
-    })
-    .select("id")
-    .single();
-
-  if (workspaceError || !workspace) {
-    throw new Error(workspaceError?.message ?? "Failed to create workspace.");
-  }
-
-  const { error: memberError } = await adminClient
-    .from("workspace_members")
-    .insert({
-      workspace_id: workspace.id,
-      user_id: params.userId,
-      role: "owner",
-    });
-
-  if (memberError) {
-    throw new Error(memberError.message);
   }
 }
 
@@ -78,7 +36,7 @@ export async function signupAction(formData: FormData) {
   const password = typeof passwordValue === "string" ? passwordValue : null;
 
   if (!email || !password) {
-    redirect("/signup?error=Please+enter+email+and+password.");
+    redirect("/signup?error=Ingresa+correo+electr%C3%B3nico+y+contrase%C3%B1a.");
   }
 
   const supabase = await createSupabaseServerAuthClient();
@@ -97,11 +55,11 @@ export async function signupAction(formData: FormData) {
   }
 
   if (!data.user) {
-    redirect("/signup?error=Unable+to+create+account.");
+    redirect("/signup?error=No+se+pudo+crear+la+cuenta.");
   }
 
   try {
-    await bootstrapUserWorkspace({
+    await ensureUserProfile({
       userId: data.user.id,
       email,
       fullName,
@@ -110,7 +68,7 @@ export async function signupAction(formData: FormData) {
     const message =
       bootstrapError instanceof Error
         ? bootstrapError.message
-        : "Account created, but workspace setup failed.";
+        : "La cuenta se creó, pero falló la configuración del perfil.";
     redirect(`/signup?error=${encodeURIComponent(message)}`);
   }
 
@@ -122,10 +80,10 @@ export async function signupAction(formData: FormData) {
 
     if (loginError) {
       redirect(
-        "/login?error=Account+created.+Please+confirm+your+email+before+logging+in.",
+        "/login?error=Cuenta+creada.+Confirma+tu+correo+antes+de+iniciar+sesi%C3%B3n.",
       );
     }
   }
 
-  redirect("/app");
+  redirect("/validate-cfdi");
 }

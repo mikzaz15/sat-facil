@@ -4,7 +4,7 @@ import { createSupabaseServerAuthClient } from "@/lib/supabase/auth-server";
 import { getCurrentUserWorkspace } from "@/lib/workspace";
 
 function formatMoney(value: number | null) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "USD",
   }).format(value ?? 0);
@@ -12,11 +12,28 @@ function formatMoney(value: number | null) {
 
 function formatDate(date: string | null) {
   if (!date) return "-";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-MX", {
     month: "short",
     day: "numeric",
     year: "numeric",
   }).format(new Date(date));
+}
+
+function formatQuoteStatus(status: string) {
+  switch (status) {
+    case "draft":
+      return "borrador";
+    case "sent":
+      return "enviada";
+    case "accepted":
+      return "aceptada";
+    case "deposit_paid":
+      return "anticipo pagado";
+    case "paid":
+      return "pagada";
+    default:
+      return status;
+  }
 }
 
 type QuoteRow = {
@@ -51,9 +68,9 @@ export default async function QuotesPage() {
     <section className="mx-auto max-w-5xl">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Quotes</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Cotizaciones</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Track all quotes for your workspace.
+            Da seguimiento a todas las cotizaciones de tu espacio de trabajo.
           </p>
         </div>
 
@@ -61,29 +78,29 @@ export default async function QuotesPage() {
           href="/app/quotes/new"
           className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
         >
-          New Quote
+          Nueva cotización
         </Link>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {quotes.length === 0 ? (
           <div className="p-8">
-            <p className="text-slate-700">No quotes yet</p>
+            <p className="text-slate-700">Aún no hay cotizaciones.</p>
             <Link
               href="/app/quotes/new"
               className="mt-4 inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
             >
-              Create Quote
+              Crear cotización
             </Link>
           </div>
         ) : (
           <table className="w-full text-left">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-medium">Client</th>
+                <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Total</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Created</th>
+                <th className="px-4 py-3 font-medium">Estatus</th>
+                <th className="px-4 py-3 font-medium">Creada</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-sm text-slate-800">
@@ -94,11 +111,13 @@ export default async function QuotesPage() {
                       href={`/app/quotes/${quote.id}`}
                       className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-500"
                     >
-                      {quote.clients?.[0]?.name || "Unnamed client"}
+                      {quote.clients?.[0]?.name || "Cliente sin nombre"}
                     </Link>
                   </td>
                   <td className="px-4 py-3">{formatMoney(quote.total)}</td>
-                  <td className="px-4 py-3 capitalize">{quote.status}</td>
+                  <td className="px-4 py-3 capitalize">
+                    {formatQuoteStatus(quote.status)}
+                  </td>
                   <td className="px-4 py-3">{formatDate(quote.created_at)}</td>
                 </tr>
               ))}

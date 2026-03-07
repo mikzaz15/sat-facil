@@ -39,7 +39,7 @@ type PublicQuote = {
 };
 
 function formatMoney(value: number | null) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "USD",
   }).format(value ?? 0);
@@ -47,7 +47,7 @@ function formatMoney(value: number | null) {
 
 function formatDate(date: string | null) {
   if (!date) return "-";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-MX", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -65,6 +65,23 @@ function badgeClass(status: string) {
     return "bg-amber-100 text-amber-800";
   }
   return "bg-amber-100 text-amber-800";
+}
+
+function formatQuoteStatus(status: string) {
+  switch (status) {
+    case "draft":
+      return "borrador";
+    case "sent":
+      return "enviada";
+    case "accepted":
+      return "aceptada";
+    case "deposit_paid":
+      return "anticipo pagado";
+    case "paid":
+      return "pagada";
+    default:
+      return status;
+  }
 }
 
 export default async function PublicQuotePage({
@@ -106,32 +123,34 @@ export default async function PublicQuotePage({
       <section className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">Accepto Quote</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Cotización SAT Fácil
+            </h1>
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${badgeClass(quote.status)}`}
             >
-              {quote.status}
+              {formatQuoteStatus(quote.status)}
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-600">
-            Created {formatDate(quote.created_at)}
+            Creada {formatDate(quote.created_at)}
           </p>
 
           {acceptedNow || quote.status === "accepted" ? (
             <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              Quote accepted
+              Cotización aceptada
             </p>
           ) : null}
 
           {paidNow ? (
             <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              Deposit payment received.
+              Anticipo recibido.
             </p>
           ) : null}
 
           {canceled ? (
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Checkout was canceled.
+              El proceso de pago fue cancelado.
             </p>
           ) : null}
 
@@ -143,39 +162,39 @@ export default async function PublicQuotePage({
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Client</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Cliente</h2>
           <dl className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
             <div>
-              <dt className="text-slate-500">Name</dt>
+              <dt className="text-slate-500">Nombre</dt>
               <dd className="font-medium text-slate-900">
                 {client?.name || "-"}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Company</dt>
+              <dt className="text-slate-500">Empresa</dt>
               <dd>{client?.company || "-"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Email</dt>
+              <dt className="text-slate-500">Correo electrónico</dt>
               <dd>{client?.email || "-"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Phone</dt>
+              <dt className="text-slate-500">Teléfono</dt>
               <dd>{client?.phone || "-"}</dd>
             </div>
           </dl>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Line items</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Conceptos</h2>
           {quote.quote_items && quote.quote_items.length > 0 ? (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase tracking-[0.08em] text-slate-500">
                   <tr>
-                    <th className="px-1 py-2 font-medium">Name</th>
-                    <th className="px-1 py-2 font-medium">Qty</th>
-                    <th className="px-1 py-2 font-medium">Unit price</th>
+                    <th className="px-1 py-2 font-medium">Nombre</th>
+                    <th className="px-1 py-2 font-medium">Cantidad</th>
+                    <th className="px-1 py-2 font-medium">Precio unitario</th>
                     <th className="px-1 py-2 font-medium">Total</th>
                   </tr>
                 </thead>
@@ -196,27 +215,29 @@ export default async function PublicQuotePage({
               </table>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">No items in this quote.</p>
+            <p className="mt-3 text-sm text-slate-600">
+              No hay conceptos en esta cotización.
+            </p>
           )}
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Totals</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Totales</h2>
           <dl className="mt-3 grid max-w-sm gap-2 text-sm text-slate-700">
             <div className="flex items-center justify-between">
               <dt>Subtotal</dt>
               <dd className="font-medium">{formatMoney(quote.subtotal)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt>Tax</dt>
+              <dt>Impuesto</dt>
               <dd className="font-medium">{formatMoney(quote.tax)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt>Discount</dt>
+              <dt>Descuento</dt>
               <dd className="font-medium">{formatMoney(quote.discount)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt>Deposit percent</dt>
+              <dt>Porcentaje de anticipo</dt>
               <dd className="font-medium">{quote.deposit_percent ?? 0}%</dd>
             </div>
             <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-2 text-base">
@@ -236,7 +257,7 @@ export default async function PublicQuotePage({
                 type="submit"
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
               >
-                Accept Quote
+                Aceptar cotización
               </button>
             </form>
           ) : canPayDeposit ? (
@@ -247,7 +268,7 @@ export default async function PublicQuotePage({
               disabled
               className="cursor-not-allowed rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white opacity-75"
             >
-              Deposit Paid
+              Anticipo pagado
             </button>
           ) : (
             <button
@@ -255,7 +276,7 @@ export default async function PublicQuotePage({
               disabled
               className="cursor-not-allowed rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white opacity-75"
             >
-              Quote Accepted
+              Cotización aceptada
             </button>
           )}
         </div>

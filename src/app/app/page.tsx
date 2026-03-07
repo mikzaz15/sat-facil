@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function AppHomePage() {
-  redirect("/app/quotes");
+  redirect("/validate-cfdi");
 }

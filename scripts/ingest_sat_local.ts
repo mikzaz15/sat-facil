@@ -2,17 +2,16 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
+import crypto from "crypto";
 import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { PDFParse } from "pdf-parse";
 
-type LocalSourceDoc = {
+type LocalMarkdownDoc = {
   absolutePath: string;
   relativePath: string;
-  extension: ".pdf" | ".txt" | ".md";
   title: string;
   text: string;
   url: string;
@@ -27,19 +26,20 @@ type ChunkInsertRow = {
   chunk_index?: number;
 };
 
-type EmbeddingModelState = {
-  model: string;
-  dimension: number | null;
+type ExistingChunkRow = {
+  id: string;
+  chunk_text: string;
+  tags: string[] | null;
+};
+
+type MarkdownSection = {
+  heading: string;
+  body: string;
 };
 
 const SOURCE_ROOT = path.resolve(process.cwd(), "sat_sources");
-const SUPPORTED_EXTENSIONS = new Set([".pdf", ".txt", ".md"]);
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
-const MODEL_BY_DIMENSION: Record<number, string> = {
-  1536: "text-embedding-3-small",
-  3072: "text-embedding-3-large",
-};
-
+const EMBEDDING_MODEL = "text-embedding-3-small";
+const SUPPORTED_EXTENSIONS = new Set([".md"]);
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 180;
 const MIN_TEXT_CHARS = 250;
@@ -77,6 +77,47 @@ function normalizeText(input: string): string {
     .trim();
 }
 
+function normalizeForHash(input: string): string {
+  return normalizeText(input).replace(/\s+/g, " ").trim();
+}
+
+function hashStrings(values: string[]): string {
+  const hash = crypto.createHash("sha256");
+  hash.update(values.join("\n<chunk>\n"));
+  return hash.digest("hex");
+}
+
+function hashChunkPayload(rows: Array<{ chunk_text: string; tags: string[] | null }>): string {
+  const normalizedRows = rows
+    .map((row) => {
+      const text = normalizeForHash(row.chunk_text);
+      const tags = [...(row.tags ?? [])].sort().join(",");
+      return `${text}||${tags}`;
+    })
+    .sort();
+
+  return hashStrings(normalizedRows);
+}
+
+function markdownTitle(raw: string): string | null {
+  const lines = raw.split("\n");
+  for (const line of lines) {
+    const match = line.trim().match(/^#\s+(.+)$/);
+    if (match?.[1]) return match[1].trim();
+  }
+  return null;
+}
+
+function slugToTitle(fileName: string): string {
+  const withoutExt = fileName.replace(/\.[^.]+$/, "");
+  const words = withoutExt
+    .split(/[_\-]+/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .map((word) => word[0]?.toUpperCase() + word.slice(1));
+  return words.join(" ") || fileName;
+}
+
 function splitPathToTags(relativePath: string): string[] {
   const normalized = relativePath.replace(/\\/g, "/").toLowerCase();
   const withoutExt = normalized.replace(/\.[^.]+$/, "");
@@ -88,31 +129,64 @@ function splitPathToTags(relativePath: string): string[] {
   return [...new Set(parts)].slice(0, 10);
 }
 
-function slugToTitle(fileName: string): string {
-  const withoutExt = fileName.replace(/\.[^.]+$/, "");
-  const words = withoutExt
-    .split(/[_\-]+/)
-    .map((word) => word.trim())
-    .filter(Boolean)
-    .map((word) => word[0]?.toUpperCase() + word.slice(1));
-
-  return words.join(" ") || fileName;
+function stripFrontmatter(raw: string): string {
+  return raw.replace(/^---[\s\S]*?---\s*/m, "");
 }
 
-function markdownTitle(raw: string): string | null {
-  const lines = raw.split("\n");
+function parseMarkdownSections(input: string): MarkdownSection[] {
+  const lines = input.split("\n");
+  const sections: MarkdownSection[] = [];
+  const headingPath: string[] = [];
+
+  let currentHeading = "";
+  let bodyBuffer: string[] = [];
+
+  const flush = () => {
+    const body = normalizeText(bodyBuffer.join("\n"));
+    if (body.length > 0) {
+      sections.push({ heading: currentHeading, body });
+    }
+    bodyBuffer = [];
+  };
+
   for (const line of lines) {
-    const match = line.trim().match(/^#\s+(.+)$/);
-    if (match?.[1]) {
-      return match[1].trim();
+    const headerMatch = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (headerMatch) {
+      flush();
+
+      const level = headerMatch[1].length;
+      const title = normalizeText(headerMatch[2] ?? "");
+      headingPath[level - 1] = title;
+      headingPath.length = level;
+      currentHeading = headingPath.filter(Boolean).join(" > ");
+      continue;
+    }
+
+    bodyBuffer.push(line);
+  }
+
+  flush();
+
+  if (sections.length === 0) {
+    const body = normalizeText(input);
+    if (body.length > 0) {
+      return [{ heading: "", body }];
     }
   }
-  return null;
+
+  return sections;
 }
 
-function chunkTextByParagraphs(input: string, chunkSize = CHUNK_SIZE, overlap = CHUNK_OVERLAP): string[] {
-  const cleaned = normalizeText(input);
-  const paragraphs = cleaned
+function chunkSectionByParagraphs(
+  section: MarkdownSection,
+  chunkSize = CHUNK_SIZE,
+  overlap = CHUNK_OVERLAP,
+): string[] {
+  const prefix = section.heading ? `Seccion: ${section.heading}\n\n` : "";
+  const maxBodySize = Math.max(420, chunkSize - prefix.length);
+  const step = Math.max(120, maxBodySize - overlap);
+
+  const paragraphs = section.body
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
@@ -121,22 +195,24 @@ function chunkTextByParagraphs(input: string, chunkSize = CHUNK_SIZE, overlap = 
   let buffer = "";
 
   const flush = () => {
-    const next = buffer.trim();
-    if (next.length >= MIN_TEXT_CHARS) chunks.push(next);
+    const body = normalizeText(buffer);
+    const chunk = normalizeText(`${prefix}${body}`);
+    if (chunk.length >= MIN_TEXT_CHARS) chunks.push(chunk);
     buffer = "";
   };
 
   for (const paragraph of paragraphs) {
-    if (paragraph.length > chunkSize * 1.5) {
+    if (paragraph.length > maxBodySize * 1.5) {
       flush();
-      for (let cursor = 0; cursor < paragraph.length; cursor += chunkSize - overlap) {
-        const slice = paragraph.slice(cursor, cursor + chunkSize).trim();
-        if (slice.length >= MIN_TEXT_CHARS) chunks.push(slice);
+      for (let cursor = 0; cursor < paragraph.length; cursor += step) {
+        const slice = paragraph.slice(cursor, cursor + maxBodySize).trim();
+        const chunk = normalizeText(`${prefix}${slice}`);
+        if (chunk.length >= MIN_TEXT_CHARS) chunks.push(chunk);
       }
       continue;
     }
 
-    if ((buffer + "\n\n" + paragraph).length > chunkSize) {
+    if ((buffer + "\n\n" + paragraph).length > maxBodySize) {
       flush();
       buffer = paragraph;
     } else {
@@ -148,60 +224,38 @@ function chunkTextByParagraphs(input: string, chunkSize = CHUNK_SIZE, overlap = 
   return chunks;
 }
 
-function parseVectorDimensionFromValue(value: unknown): number | null {
-  if (Array.isArray(value)) {
-    return value.length;
+function chunkMarkdownBySections(input: string): string[] {
+  const sections = parseMarkdownSections(input);
+  const chunks: string[] = [];
+
+  for (const section of sections) {
+    chunks.push(...chunkSectionByParagraphs(section));
   }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
-      return null;
-    }
-
-    const inner = trimmed.slice(1, -1).trim();
-    if (!inner) return 0;
-    return inner.split(",").length;
+  if (chunks.length > 0) {
+    return chunks;
   }
 
-  return null;
-}
-
-function parseExpectedDimensionFromError(message: string): number | null {
-  const expectedPattern = /expected\s+(\d+)\s+dimensions?/i;
-  const vectorPattern = /vector\((\d+)\)/i;
-
-  const expectedMatch = message.match(expectedPattern);
-  if (expectedMatch?.[1]) {
-    const value = Number(expectedMatch[1]);
-    return Number.isFinite(value) ? value : null;
-  }
-
-  const vectorMatch = message.match(vectorPattern);
-  if (vectorMatch?.[1]) {
-    const value = Number(vectorMatch[1]);
-    return Number.isFinite(value) ? value : null;
-  }
-
-  return null;
-}
-
-function requiresSourceColumn(message: string): boolean {
-  return /source/i.test(message) && /not-null|null value|violates/i.test(message);
+  // Conservative fallback to avoid empty-ingestion for unusual markdown formatting.
+  const fallbackBody = normalizeText(input);
+  if (fallbackBody.length < MIN_TEXT_CHARS) return [];
+  return [{ heading: "", body: fallbackBody }].flatMap((section) => chunkSectionByParagraphs(section));
 }
 
 function requiresChunkIndexColumn(message: string): boolean {
   return /chunk_index/i.test(message) && /not-null|null value|violates/i.test(message);
 }
 
+function sourceColumnMissing(message: string): boolean {
+  return /column/i.test(message) && /source/i.test(message) && /does not exist/i.test(message);
+}
+
 function toVectorLiteral(values: number[]): string {
   return `[${values.join(",")}]`;
 }
 
-async function collectLocalFiles(root: string): Promise<string[]> {
-  if (!fs.existsSync(root)) {
-    return [];
-  }
+async function collectMarkdownFiles(root: string): Promise<string[]> {
+  if (!fs.existsSync(root)) return [];
 
   const files: string[] = [];
 
@@ -213,10 +267,7 @@ async function collectLocalFiles(root: string): Promise<string[]> {
         await walk(absolutePath);
         continue;
       }
-
-      if (!entry.isFile()) {
-        continue;
-      }
+      if (!entry.isFile()) continue;
 
       const ext = path.extname(entry.name).toLowerCase();
       if (SUPPORTED_EXTENSIONS.has(ext)) {
@@ -230,117 +281,30 @@ async function collectLocalFiles(root: string): Promise<string[]> {
   return files;
 }
 
-async function parsePdfFile(absolutePath: string): Promise<string> {
-  const buffer = await fsp.readFile(absolutePath);
-  const parser = new PDFParse({ data: buffer });
-
-  try {
-    const result = await parser.getText();
-    return normalizeText(result.text ?? "");
-  } finally {
-    await parser.destroy();
-  }
-}
-
-async function readLocalDocument(absolutePath: string): Promise<LocalSourceDoc | null> {
+async function readMarkdownDocument(absolutePath: string): Promise<LocalMarkdownDoc | null> {
   const relativePath = path.relative(SOURCE_ROOT, absolutePath).replace(/\\/g, "/");
-  const ext = path.extname(absolutePath).toLowerCase() as ".pdf" | ".txt" | ".md";
-
   const fileName = path.basename(absolutePath);
-  const fallbackTitle = slugToTitle(fileName);
+  const raw = await fsp.readFile(absolutePath, "utf8");
+  const body = stripFrontmatter(raw);
+  const title = markdownTitle(raw) ?? slugToTitle(fileName);
+  const normalizedBody = normalizeText(body);
 
-  let text = "";
-  let title = fallbackTitle;
-
-  if (ext === ".pdf") {
-    text = await parsePdfFile(absolutePath);
-  }
-
-  if (ext === ".txt") {
-    text = normalizeText(await fsp.readFile(absolutePath, "utf8"));
-  }
-
-  if (ext === ".md") {
-    const raw = await fsp.readFile(absolutePath, "utf8");
-    title = markdownTitle(raw) ?? fallbackTitle;
-    text = normalizeText(raw.replace(/^---[\s\S]*?---\s*/m, ""));
-  }
-
-  if (text.length < MIN_TEXT_CHARS) {
-    log("WARN", `Skipping ${relativePath}: extracted text too short (${text.length} chars).`);
+  if (normalizedBody.length < MIN_TEXT_CHARS) {
+    log("WARN", `Skipping ${relativePath}: extracted text too short (${normalizedBody.length} chars).`);
     return null;
   }
 
   return {
     absolutePath,
     relativePath,
-    extension: ext,
     title,
-    text,
+    text: body,
     url: `local://sat_sources/${relativePath}`,
-    tags: [...splitPathToTags(relativePath), `ext:${ext.replace(".", "")}`],
+    tags: [...splitPathToTags(relativePath), "ext:md", "doc:local_md"],
   };
 }
 
-async function detectDbVectorDimension(supabase: SupabaseClient): Promise<number | null> {
-  const sample = await supabase
-    .from("kb_chunks")
-    .select("embedding")
-    .not("embedding", "is", null)
-    .limit(1)
-    .maybeSingle();
-
-  if (sample.error) {
-    log("WARN", `Could not sample kb_chunks.embedding dimension: ${sample.error.message}`);
-  } else if (sample.data?.embedding != null) {
-    const dim = parseVectorDimensionFromValue(sample.data.embedding);
-    if (dim && dim > 0) {
-      return dim;
-    }
-  }
-
-  const probe = await supabase.rpc("match_kb_chunks", {
-    query_embedding: "[0]",
-    match_count: 1,
-    filter_tags: null,
-  });
-
-  if (probe.error) {
-    const dim = parseExpectedDimensionFromError(probe.error.message);
-    if (dim) {
-      return dim;
-    }
-  }
-
-  return null;
-}
-
-async function chooseEmbeddingModel(supabase: SupabaseClient): Promise<EmbeddingModelState> {
-  const dbDimension = await detectDbVectorDimension(supabase);
-  if (dbDimension != null) {
-    const mappedModel = MODEL_BY_DIMENSION[dbDimension];
-    if (mappedModel) {
-      return { model: mappedModel, dimension: dbDimension };
-    }
-
-    const envModel = process.env.OPENAI_EMBEDDING_MODEL?.trim();
-    if (envModel) {
-      log(
-        "WARN",
-        `Detected vector(${dbDimension}) without known default mapping. Using OPENAI_EMBEDDING_MODEL=${envModel}.`,
-      );
-      return { model: envModel, dimension: dbDimension };
-    }
-
-    throw new Error(
-      `Unsupported DB vector dimension ${dbDimension}. Set OPENAI_EMBEDDING_MODEL to a compatible model.`,
-    );
-  }
-
-  return { model: process.env.OPENAI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_MODEL, dimension: null };
-}
-
-async function createEmbeddingsBatch(model: string, input: string[]): Promise<number[][]> {
+async function createEmbeddingsBatch(input: string[]): Promise<number[][]> {
   const apiKey = mustGetEnv("OPENAI_API_KEY");
 
   const response = await fetch("https://api.openai.com/v1/embeddings", {
@@ -349,7 +313,7 @@ async function createEmbeddingsBatch(model: string, input: string[]): Promise<nu
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model, input }),
+    body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
   });
 
   const raw = await response.text();
@@ -367,27 +331,31 @@ async function createEmbeddingsBatch(model: string, input: string[]): Promise<nu
   return embeddings;
 }
 
-async function createEmbeddings(model: string, chunks: string[]): Promise<number[][]> {
+async function createEmbeddings(chunks: string[]): Promise<number[][]> {
   const embeddings: number[][] = [];
 
   for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
     const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
-    log("INFO", `Embedding ${batch.length} chunks (${i + 1}-${i + batch.length}) with ${model}.`);
-    const result = await createEmbeddingsBatch(model, batch);
+    log(
+      "INFO",
+      `Embedding ${batch.length} chunks (${i + 1}-${i + batch.length}) with ${EMBEDDING_MODEL}.`,
+    );
+    const result = await createEmbeddingsBatch(batch);
     embeddings.push(...result);
   }
 
   return embeddings;
 }
 
-async function upsertSourceCompat(
+async function upsertSource(
   supabase: SupabaseClient,
-  document: LocalSourceDoc,
+  document: LocalMarkdownDoc,
 ): Promise<{ id: string }> {
   const basePayload = {
     url: document.url,
     title: document.title,
     publisher: "SAT",
+    source: "local_md",
     last_crawled_at: new Date().toISOString(),
   };
 
@@ -401,10 +369,18 @@ async function upsertSourceCompat(
     return { id: response.data.id as string };
   }
 
-  if (response.error && requiresSourceColumn(response.error.message)) {
+  if (response.error && sourceColumnMissing(response.error.message)) {
     response = await supabase
       .from("kb_sources")
-      .upsert({ ...basePayload, source: "local://sat_sources" }, { onConflict: "url" })
+      .upsert(
+        {
+          url: document.url,
+          title: document.title,
+          publisher: "SAT",
+          last_crawled_at: new Date().toISOString(),
+        },
+        { onConflict: "url" },
+      )
       .select("id")
       .single();
 
@@ -413,28 +389,39 @@ async function upsertSourceCompat(
     }
   }
 
-  throw new Error(`Could not upsert kb_sources for ${document.relativePath}: ${response.error?.message || "unknown"}`);
+  throw new Error(
+    `Could not upsert kb_sources for ${document.relativePath}: ${response.error?.message || "unknown"}`,
+  );
 }
 
-async function deleteChunksForSource(supabase: SupabaseClient, sourceId: string): Promise<void> {
-  const response = await supabase.from("kb_chunks").delete().eq("source_id", sourceId);
+async function loadExistingChunks(
+  supabase: SupabaseClient,
+  sourceId: string,
+): Promise<ExistingChunkRow[]> {
+  const response = await supabase.from("kb_chunks").select("id,chunk_text,tags").eq("source_id", sourceId);
   if (response.error) {
-    throw new Error(`Could not delete old chunks for source ${sourceId}: ${response.error.message}`);
+    throw new Error(`Could not load existing chunks for source ${sourceId}: ${response.error.message}`);
+  }
+
+  return (response.data ?? []) as ExistingChunkRow[];
+}
+
+async function deleteChunksByIds(supabase: SupabaseClient, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+
+  const response = await supabase.from("kb_chunks").delete().in("id", ids);
+  if (response.error) {
+    throw new Error(`Could not delete old kb_chunks rows: ${response.error.message}`);
   }
 }
 
-async function insertChunkRows(
-  supabase: SupabaseClient,
-  rows: ChunkInsertRow[],
-): Promise<void> {
+async function insertChunkRows(supabase: SupabaseClient, rows: ChunkInsertRow[]): Promise<void> {
   let payload = rows;
   let withChunkIndex = false;
 
   while (true) {
     const response = await supabase.from("kb_chunks").insert(payload);
-    if (!response.error) {
-      return;
-    }
+    if (!response.error) return;
 
     if (!withChunkIndex && requiresChunkIndexColumn(response.error.message)) {
       withChunkIndex = true;
@@ -448,49 +435,36 @@ async function insertChunkRows(
 
 async function ingestDocument(
   supabase: SupabaseClient,
-  document: LocalSourceDoc,
-  modelState: EmbeddingModelState,
-): Promise<{ chunks: number }> {
-  const chunks = chunkTextByParagraphs(document.text);
+  document: LocalMarkdownDoc,
+): Promise<{ chunks: number; status: "updated" | "unchanged" }> {
+  const chunks = chunkMarkdownBySections(document.text);
   if (chunks.length === 0) {
     throw new Error(`No chunks produced from ${document.relativePath}`);
   }
 
-  const source = await upsertSourceCompat(supabase, document);
-  await deleteChunksForSource(supabase, source.id);
+  const source = await upsertSource(supabase, document);
+  const existingRows = await loadExistingChunks(supabase, source.id);
+  const nextHash = hashChunkPayload(chunks.map((chunk) => ({ chunk_text: chunk, tags: document.tags })));
+  const existingHash = hashChunkPayload(existingRows);
 
-  let model = modelState.model;
-
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const embeddings = await createEmbeddings(model, chunks);
-    const rows: ChunkInsertRow[] = chunks.map((chunk, index) => ({
-      source_id: source.id,
-      chunk_text: chunk,
-      embedding: toVectorLiteral(embeddings[index] ?? []),
-      tags: document.tags,
-    }));
-
-    try {
-      await insertChunkRows(supabase, rows);
-      modelState.model = model;
-      modelState.dimension = embeddings[0]?.length ?? modelState.dimension;
-      return { chunks: chunks.length };
-    } catch (error) {
-      const message = getErrorMessage(error);
-      const expectedDimension = parseExpectedDimensionFromError(message);
-      const fallbackModel = expectedDimension ? MODEL_BY_DIMENSION[expectedDimension] : undefined;
-
-      if (fallbackModel && fallbackModel !== model && attempt < 2) {
-        log("WARN", `Embedding dimension mismatch; retrying ${document.relativePath} with ${fallbackModel}.`);
-        model = fallbackModel;
-        continue;
-      }
-
-      throw error;
-    }
+  if (existingRows.length > 0 && nextHash === existingHash) {
+    return { chunks: chunks.length, status: "unchanged" };
   }
 
-  throw new Error(`Could not ingest ${document.relativePath}`);
+  const embeddings = await createEmbeddings(chunks);
+  const rows: ChunkInsertRow[] = chunks.map((chunk, index) => ({
+    source_id: source.id,
+    chunk_text: chunk,
+    embedding: toVectorLiteral(embeddings[index] ?? []),
+    tags: document.tags,
+  }));
+
+  await insertChunkRows(supabase, rows);
+
+  const previousIds = existingRows.map((row) => row.id);
+  await deleteChunksByIds(supabase, previousIds);
+
+  return { chunks: chunks.length, status: "updated" };
 }
 
 async function main() {
@@ -502,40 +476,44 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const files = await collectLocalFiles(SOURCE_ROOT);
+  const files = await collectMarkdownFiles(SOURCE_ROOT);
   if (files.length === 0) {
-    throw new Error(`No PDF/TXT/MD files found under ${SOURCE_ROOT}`);
+    throw new Error(`No .md files found under ${SOURCE_ROOT}`);
   }
 
-  const modelState = await chooseEmbeddingModel(supabase);
   log(
     "INFO",
-    `Starting local SAT ingestion from ${SOURCE_ROOT}. files=${files.length}, embedding_model=${modelState.model}${
-      modelState.dimension ? `, db_vector_dim=${modelState.dimension}` : ""
-    }`,
+    `Starting local markdown SAT ingestion from ${SOURCE_ROOT}. files=${files.length}, embedding_model=${EMBEDDING_MODEL}.`,
   );
 
-  let processed = 0;
+  let updated = 0;
+  let unchanged = 0;
   let skipped = 0;
   let failed = 0;
   let totalChunks = 0;
 
   for (const absolutePath of files) {
-    let document: LocalSourceDoc | null = null;
+    let document: LocalMarkdownDoc | null = null;
     try {
-      document = await readLocalDocument(absolutePath);
+      document = await readMarkdownDocument(absolutePath);
       if (!document) {
         skipped += 1;
         continue;
       }
 
-      const result = await ingestDocument(supabase, document, modelState);
-      processed += 1;
+      const result = await ingestDocument(supabase, document);
+      if (result.status === "unchanged") {
+        unchanged += 1;
+        log("INFO", `No content change for ${document.relativePath}; skipping re-ingestion.`);
+        continue;
+      }
+
+      updated += 1;
       totalChunks += result.chunks;
 
       log(
         "INFO",
-        `Ingested ${document.relativePath} (${document.extension}) -> chunks=${result.chunks}, tags=${document.tags.length}.`,
+        `Replaced chunks for ${document.relativePath} -> chunks=${result.chunks}, tags=${document.tags.length}.`,
       );
     } catch (error) {
       failed += 1;
@@ -546,7 +524,7 @@ async function main() {
 
   log(
     "INFO",
-    `Completed local SAT ingestion. processed=${processed}, skipped=${skipped}, failed=${failed}, total_chunks=${totalChunks}.`,
+    `Completed local markdown SAT ingestion. updated=${updated}, unchanged=${unchanged}, skipped=${skipped}, failed=${failed}, total_chunks=${totalChunks}.`,
   );
 
   if (failed > 0) {
@@ -555,6 +533,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  log("ERROR", `Fatal local ingestion error: ${getErrorMessage(error)}`);
+  log("ERROR", `Fatal local markdown ingestion error: ${getErrorMessage(error)}`);
   process.exit(1);
 });

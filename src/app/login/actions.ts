@@ -4,12 +4,28 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerAuthClient } from "@/lib/supabase/auth-server";
 
+const DEFAULT_AUTH_REDIRECT = "/validate-cfdi";
+
+function isSafeInternalPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//");
+}
+
 function getNextPath(formData: FormData) {
   const nextValue = formData.get("next");
-  if (typeof nextValue === "string" && nextValue.startsWith("/app")) {
-    return nextValue;
+  if (typeof nextValue !== "string") {
+    return DEFAULT_AUTH_REDIRECT;
   }
-  return "/app";
+
+  const nextPath = nextValue.trim();
+  if (!isSafeInternalPath(nextPath)) {
+    return DEFAULT_AUTH_REDIRECT;
+  }
+
+  if (nextPath === "/app" || nextPath.startsWith("/app/")) {
+    return DEFAULT_AUTH_REDIRECT;
+  }
+
+  return nextPath;
 }
 
 export async function loginAction(formData: FormData) {
@@ -18,7 +34,7 @@ export async function loginAction(formData: FormData) {
   const nextPath = getNextPath(formData);
 
   if (typeof email !== "string" || typeof password !== "string") {
-    redirect("/login?error=Please+enter+email+and+password.");
+    redirect("/login?error=Ingresa+correo+electr%C3%B3nico+y+contrase%C3%B1a.");
   }
 
   const supabase = await createSupabaseServerAuthClient();

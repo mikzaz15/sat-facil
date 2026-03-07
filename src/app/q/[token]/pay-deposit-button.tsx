@@ -30,14 +30,14 @@ export function PayDepositButton({ token }: PayDepositButtonProps) {
       };
 
       if (!response.ok || !payload.ok || !payload.url) {
-        setError(payload.error ?? "Unable to start checkout.");
+        setError(payload.error ?? "No se pudo iniciar el proceso de pago.");
         setLoading(false);
         return;
       }
 
       window.location.assign(payload.url);
     } catch {
-      setError("Unable to start checkout.");
+      setError("No se pudo iniciar el proceso de pago.");
       setLoading(false);
     }
   }
@@ -50,7 +50,7 @@ export function PayDepositButton({ token }: PayDepositButtonProps) {
         disabled={loading}
         className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {loading ? "Redirecting..." : "Pay deposit"}
+        {loading ? "Redirigiendo..." : "Pagar anticipo"}
       </button>
       {error ? <p className="text-sm text-rose-700">{error}</p> : null}
     </div>

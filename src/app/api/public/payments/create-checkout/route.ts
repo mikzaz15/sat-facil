@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     payload = (await request.json()) as CheckoutPayload;
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body." },
+      { ok: false, error: "El cuerpo JSON es inválido." },
       { status: 400 },
     );
   }
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   const token = typeof payload.token === "string" ? payload.token.trim() : "";
   if (!token) {
     return NextResponse.json(
-      { ok: false, error: "Missing token." },
+      { ok: false, error: "Falta el token." },
       { status: 400 },
     );
   }
@@ -57,14 +57,14 @@ export async function POST(request: Request) {
 
   if (!quote) {
     return NextResponse.json(
-      { ok: false, error: "Quote not found." },
+      { ok: false, error: "Cotización no encontrada." },
       { status: 404 },
     );
   }
 
   if (quote.status !== "accepted") {
     return NextResponse.json(
-      { ok: false, error: "Quote is not ready for deposit payment." },
+      { ok: false, error: "La cotización no está lista para pagar anticipo." },
       { status: 400 },
     );
   }
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const depositPercent = asNumber(quote.deposit_percent) || 0;
   if (!Number.isFinite(total) || total <= 0) {
     return NextResponse.json(
-      { ok: false, error: "Quote total is invalid." },
+      { ok: false, error: "El total de la cotización es inválido." },
       { status: 400 },
     );
   }
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   const amountCents = Math.round(total * (depositPercent / 100) * 100);
   if (!Number.isFinite(amountCents) || amountCents <= 0) {
     return NextResponse.json(
-      { ok: false, error: "Deposit amount must be greater than zero." },
+      { ok: false, error: "El monto del anticipo debe ser mayor a cero." },
       { status: 400 },
     );
   }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
           currency: "usd",
           unit_amount: amountCents,
           product_data: {
-            name: "Quote Deposit",
+            name: "Anticipo de cotización",
           },
         },
       },

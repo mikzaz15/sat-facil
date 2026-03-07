@@ -22,7 +22,7 @@ export default async function AppLayout({
       <div className="mx-auto flex min-h-screen w-full max-w-7xl">
         <aside className="hidden w-64 border-r border-slate-200 bg-white p-6 md:flex md:flex-col">
           <Link href="/app/quotes" className="text-xl font-semibold text-slate-900">
-            Accepto
+            SAT Fácil
           </Link>
 
           <nav className="mt-8 space-y-1">
@@ -30,7 +30,7 @@ export default async function AppLayout({
               href="/app/quotes"
               className="block rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
             >
-              Quotes
+              Cotizaciones
             </Link>
           </nav>
         </aside>
@@ -38,14 +38,14 @@ export default async function AppLayout({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
             <p className="text-sm font-medium text-slate-700">
-              {user.email ?? "Logged in"}
+              {user.email ?? "Sesión iniciada"}
             </p>
             <form action={logoutAction}>
               <button
                 type="submit"
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
-                Log out
+                Cerrar sesión
               </button>
             </form>
           </header>

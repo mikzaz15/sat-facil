@@ -2,6 +2,12 @@ import Link from "next/link";
 
 import { loginAction } from "./actions";
 
+const DEFAULT_AUTH_REDIRECT = "/validate-cfdi";
+
+function isSafeInternalPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//");
+}
+
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
@@ -11,20 +17,26 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
+  const nextCandidate = typeof params.next === "string" ? params.next.trim() : "";
   const nextPath =
-    typeof params.next === "string" && params.next.startsWith("/app")
-      ? params.next
-      : "/app";
+    isSafeInternalPath(nextCandidate) &&
+    nextCandidate !== "/app" &&
+    !nextCandidate.startsWith("/app/")
+      ? nextCandidate
+      : DEFAULT_AUTH_REDIRECT;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">
-          Accepto
+          SAT Fácil
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Log in</h1>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+          Iniciar sesión
+        </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Access your quotes, acceptances, and payments.
+          Accede a SAT Fácil para validar CFDI antes de timbrar, revisar errores
+          SAT y usar el asistente.
         </p>
 
         {params.error ? (
@@ -41,7 +53,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               htmlFor="email"
               className="block text-sm font-medium text-slate-700"
             >
-              Email
+              Correo electrónico
             </label>
             <input
               id="email"
@@ -57,7 +69,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               htmlFor="password"
               className="block text-sm font-medium text-slate-700"
             >
-              Password
+              Contraseña
             </label>
             <input
               id="password"
@@ -72,14 +84,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             type="submit"
             className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
           >
-            Log in
+            Iniciar sesión
           </button>
         </form>
 
         <p className="mt-6 text-sm text-slate-600">
-          New to Accepto?{" "}
+          ¿Nuevo en SAT Fácil?{" "}
           <Link href="/signup" className="font-medium text-slate-900 underline">
-            Create an account
+            Crear cuenta
           </Link>
         </p>
       </div>

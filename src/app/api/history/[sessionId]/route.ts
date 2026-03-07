@@ -13,7 +13,7 @@ export async function GET(
     const messages = await getMessagesForSession(supabase, sessionId);
     return NextResponse.json({ ok: true, data: messages });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
+    const message = error instanceof Error ? error.message : "Error inesperado";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

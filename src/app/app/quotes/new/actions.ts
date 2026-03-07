@@ -41,11 +41,11 @@ function normalizeLineItems(rawJson: FormDataEntryValue | null) {
   try {
     parsed = JSON.parse(rawJson);
   } catch {
-    throw new Error("Invalid line items payload.");
+    throw new Error("Payload de conceptos inválido.");
   }
 
   if (!Array.isArray(parsed)) {
-    throw new Error("Invalid line items payload.");
+    throw new Error("Payload de conceptos inválido.");
   }
 
   const normalized = parsed
@@ -76,12 +76,12 @@ export async function createQuoteAction(formData: FormData) {
   const depositPercent = parseNumber(formData.get("deposit_percent"), 50);
 
   if (typeof clientName !== "string" || clientName.trim() === "") {
-    redirect("/app/quotes/new?error=Client+name+is+required.");
+    redirect("/app/quotes/new?error=El+nombre+del+cliente+es+obligatorio.");
   }
 
   const lineItems = normalizeLineItems(formData.get("line_items_json"));
   if (lineItems.length === 0) {
-    redirect("/app/quotes/new?error=Add+at+least+one+line+item.");
+    redirect("/app/quotes/new?error=Agrega+al+menos+un+concepto.");
   }
 
   const normalizedTaxPercent = Math.max(0, taxPercent);
@@ -154,7 +154,7 @@ export async function createQuoteAction(formData: FormData) {
 
       if (createClientError || !createdClient) {
         redirect(
-          `/app/quotes/new?error=${encodeURIComponent(createClientError?.message ?? "Unable to create client.")}`,
+          `/app/quotes/new?error=${encodeURIComponent(createClientError?.message ?? "No se pudo crear el cliente.")}`,
         );
       }
 
@@ -175,7 +175,7 @@ export async function createQuoteAction(formData: FormData) {
 
     if (createClientError || !createdClient) {
       redirect(
-        `/app/quotes/new?error=${encodeURIComponent(createClientError?.message ?? "Unable to create client.")}`,
+        `/app/quotes/new?error=${encodeURIComponent(createClientError?.message ?? "No se pudo crear el cliente.")}`,
       );
     }
 
@@ -200,7 +200,7 @@ export async function createQuoteAction(formData: FormData) {
 
   if (quoteError || !createdQuote) {
     redirect(
-      `/app/quotes/new?error=${encodeURIComponent(quoteError?.message ?? "Unable to create quote.")}`,
+      `/app/quotes/new?error=${encodeURIComponent(quoteError?.message ?? "No se pudo crear la cotización.")}`,
     );
   }
 

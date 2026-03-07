@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "ingest:sat": "tsx scripts/crawl_sat.ts",
     "ingest:sat-local": "tsx scripts/ingest_sat_local.ts",
+    "ingest:sat-expanded": "tsx scripts/ingest_sat_expanded.ts",
     "eval:retrieval": "tsx scripts/eval_retrieval.ts",
     "seed:kb": "tsx scripts/seed_kb.ts"
   },

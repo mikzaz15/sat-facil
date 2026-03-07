@@ -13,7 +13,71 @@ import {
   updateSessionTopic,
 } from "@/lib/sat/store";
 import { checkAndIncrementDailyMessages } from "@/lib/sat/usage";
-import type { ChatInput, ChatResult, StructuredAnswer } from "@/lib/sat/types";
+import type {
+  ChatInput,
+  ChatResult,
+  RetrievedChunk,
+  SatTopic,
+  StructuredAnswer,
+} from "@/lib/sat/types";
+
+type ChunkIndexRow = {
+  id: string;
+  chunk_index: number | null;
+};
+
+function missingChunkIndexColumn(message: string): boolean {
+  return /column/i.test(message) && /chunk_index/i.test(message) && /does not exist/i.test(message);
+}
+
+async function loadChunkIndexById(
+  supabase: SupabaseClient,
+  chunkIds: string[],
+): Promise<Map<string, number | null>> {
+  if (chunkIds.length === 0) return new Map();
+
+  const { data, error } = await supabase.from("kb_chunks").select("id,chunk_index").in("id", chunkIds);
+  if (error) {
+    if (missingChunkIndexColumn(error.message)) {
+      return new Map();
+    }
+    console.warn(`[SAT][RAG] Failed to load chunk_index diagnostics: ${error.message}`);
+    return new Map();
+  }
+
+  const indexById = new Map<string, number | null>();
+  for (const row of (data ?? []) as ChunkIndexRow[]) {
+    indexById.set(row.id, row.chunk_index);
+  }
+  return indexById;
+}
+
+async function logRetrievalDiagnostics(
+  supabase: SupabaseClient,
+  context: {
+    sessionId: string;
+    topic: SatTopic;
+    query: string;
+    chunks: RetrievedChunk[];
+  },
+): Promise<void> {
+  const chunkIds = context.chunks.map((chunk) => chunk.id);
+  const indexById = await loadChunkIndexById(supabase, chunkIds);
+
+  const diagnostics = context.chunks.map((chunk, idx) => ({
+    rank: idx + 1,
+    score: Number.isFinite(chunk.similarity)
+      ? Number(chunk.similarity.toFixed(4))
+      : null,
+    sourceTitle: chunk.title || "(sin titulo)",
+    chunkIndex: indexById.get(chunk.id) ?? null,
+    reasons: chunk.retrieval_reasons ?? [],
+  }));
+
+  console.info(
+    `[SAT][RAG] session=${context.sessionId} topic=${context.topic} retrieved=${context.chunks.length} query="${context.query}" results=${JSON.stringify(diagnostics)}`,
+  );
+}
 
 function usageLimitAnswer(): StructuredAnswer {
   return {
@@ -66,6 +130,12 @@ export async function handleSatChat(
   const router = await routeSatQuestion(input.message);
   const ragQuery = [...router.ragQueries, input.message].join(" ");
   const chunks = await retrieveRelevantChunks(supabase, ragQuery, router.topic, 5);
+  await logRetrievalDiagnostics(supabase, {
+    sessionId,
+    topic: router.topic,
+    query: ragQuery,
+    chunks,
+  });
   const structured = await generateStructuredAnswer(input.message, chunks, router);
   const text = await guardAnswerText(formatStructuredAnswer(structured));
 

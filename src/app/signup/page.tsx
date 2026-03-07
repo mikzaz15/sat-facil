@@ -15,11 +15,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">
-          Accepto
+          SAT Fácil
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Sign up</h1>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+          Crear cuenta
+        </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Create your workspace and start sending quotes.
+          Crea tu cuenta para validar CFDI antes de timbrar, revisar errores SAT
+          y usar el asistente.
         </p>
 
         {params.error ? (
@@ -34,13 +37,13 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               htmlFor="fullName"
               className="block text-sm font-medium text-slate-700"
             >
-              Full name
+              Nombre completo
             </label>
             <input
               id="fullName"
               name="fullName"
               type="text"
-              placeholder="Jane Doe"
+              placeholder="Ej. Juan Pérez"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
             />
           </div>
@@ -50,7 +53,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               htmlFor="email"
               className="block text-sm font-medium text-slate-700"
             >
-              Email
+              Correo electrónico
             </label>
             <input
               id="email"
@@ -66,7 +69,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               htmlFor="password"
               className="block text-sm font-medium text-slate-700"
             >
-              Password
+              Contraseña
             </label>
             <input
               id="password"
@@ -82,14 +85,14 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             type="submit"
             className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
           >
-            Create account
+            Crear cuenta
           </button>
         </form>
 
         <p className="mt-6 text-sm text-slate-600">
-          Already have an account?{" "}
+          ¿Ya tienes una cuenta?{" "}
           <Link href="/login" className="font-medium text-slate-900 underline">
-            Log in
+            Iniciar sesión
           </Link>
         </p>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -30,9 +31,37 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
   const [sessionId, setSessionId] = useState("");
   const [input, setInput] = useState(initialQuestion);
   const [loading, setLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [accessError, setAccessError] = useState("");
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const quickActions = ["Dame pasos", "Haz checklist", "Genera mensaje"];
+
+  const startUpgradeCheckout = useCallback(async () => {
+    setCheckoutLoading(true);
+    setAccessError("");
+    try {
+      const response = await fetch("/api/sat/billing/checkout", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: { checkout_url?: string };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.data?.checkout_url) {
+        setAccessError(payload.error || "No se pudo iniciar el pago de Stripe.");
+        return;
+      }
+
+      window.location.href = payload.data.checkout_url;
+    } catch {
+      setAccessError("Error de conexión al iniciar el pago.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, []);
 
   const loadHistory = useCallback(async (uid: string) => {
     const response = await fetch(`/api/history?user_id=${uid}`);
@@ -96,6 +125,7 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
       }
 
       setLoading(true);
+      setAccessError("");
       setInput("");
       setMessages((prev) => [
         ...prev,
@@ -121,6 +151,7 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
 
       const payload = (await response.json()) as {
         ok: boolean;
+        code?: string;
         data?: {
           text: string;
           sessionId: string;
@@ -144,6 +175,11 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
           },
         ]);
       } else {
+        if (payload.code === "AUTH_REQUIRED") {
+          setAccessError("Inicia sesión para usar el Asistente SAT.");
+        } else if (payload.code === "PRO_REQUIRED_ASSISTANT") {
+          setAccessError("El Asistente SAT está disponible solo en Plan Pro.");
+        }
         setMessages((prev) => [
           ...prev,
           {
@@ -163,10 +199,31 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
-        <h1 className="text-xl font-semibold text-slate-900">Chat SAT Fácil</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Asistente SAT</h1>
         <p className="text-xs text-slate-700">
           Orientación educativa con fuentes SAT/gob.mx y nivel de confianza.
         </p>
+        {accessError ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p>{accessError}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Link
+                href="/login?next=/chat"
+                className="rounded-md border border-amber-400 px-2 py-1 font-medium text-amber-900 hover:bg-amber-100"
+              >
+                Iniciar sesión
+              </Link>
+              <button
+                type="button"
+                onClick={() => void startUpgradeCheckout()}
+                disabled={checkoutLoading}
+                className="rounded-md bg-sky-700 px-2 py-1 font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {checkoutLoading ? "Abriendo Stripe..." : "Mejorar a Pro ($9/mes)"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <section className="rounded-xl border border-slate-200 bg-white p-3">
