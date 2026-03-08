@@ -5,7 +5,6 @@ import {
   assertValidationAccess,
   getSatEntitlements,
   incrementValidationUsage,
-  type SatValidationMode,
 } from "@/lib/sat/billing";
 import {
   buildCfdiValidationResult,
@@ -21,19 +20,12 @@ function asOptionalString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function parseMode(value: unknown): SatValidationMode {
-  if (typeof value !== "string") return "manual";
-  return value.trim().toLowerCase() === "xml" ? "xml" : "manual";
-}
-
 function parseBody(input: unknown): {
   validationInput: CfdiValidationInput;
-  mode: SatValidationMode;
   sourcePage: string;
   fileName?: string;
 } {
   const body = (input ?? {}) as Record<string, unknown>;
-  const mode = parseMode(body.mode);
 
   return {
     validationInput: {
@@ -45,29 +37,35 @@ function parseBody(input: unknown): {
       currency: asOptionalString(body.currency),
       payment_date: asOptionalString(body.payment_date) ?? null,
     },
-    mode,
-    sourcePage:
-      asOptionalString(body.source_page) ??
-      (mode === "xml" ? "/cfdi-xml-validator" : "/validate-cfdi"),
+    sourcePage: asOptionalString(body.source_page) ?? "/cfdi-xml-validator",
     fileName: asOptionalString(body.file_name),
   };
 }
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json(
-        { ok: false, code: "AUTH_REQUIRED", error: "Autenticación requerida." },
-        { status: 401 },
-      );
-    }
-
-    const { validationInput, mode, sourcePage, fileName } = parseBody(
+    const { validationInput, sourcePage, fileName } = parseBody(
       await request.json(),
     );
+    const user = await getAuthenticatedUser();
+
+    if (!user) {
+      const previewValidation = buildCfdiValidationResult(validationInput);
+      return NextResponse.json({
+        ok: true,
+        data: {
+          preview_mode: true,
+          validation_summary: {
+            status: previewValidation.is_valid ? "Válido" : "Inválido",
+            errors_count: previewValidation.errors.length,
+            warnings_count: previewValidation.warnings.length,
+          },
+        },
+      });
+    }
+
     const supabase = createSupabaseServerClient();
-    const access = await assertValidationAccess(supabase, user.id, mode);
+    const access = await assertValidationAccess(supabase, user.id, "xml");
 
     if (!access.allowed) {
       if (access.code === "FREE_LIMIT_REACHED") {
@@ -96,11 +94,12 @@ export async function POST(request: Request) {
     }
 
     const result = buildCfdiValidationResult(validationInput);
+
     await saveValidationHistory({
       supabase,
       userId: user.id,
       fileName,
-      mode,
+      mode: "xml",
       sourcePage,
       validation: result,
     });
@@ -109,21 +108,20 @@ export async function POST(request: Request) {
       supabase,
       userId: user.id,
       sourcePage,
-      mode,
+      mode: "xml",
       plan: access.entitlements.plan,
       validation: result,
     });
 
-    await incrementValidationUsage(supabase, user.id, mode);
+    await incrementValidationUsage(supabase, user.id, "xml");
     const entitlements = await getSatEntitlements(supabase, user.id);
 
     return NextResponse.json({
       ok: true,
       data: {
-        input: validationInput,
-        mode,
-        entitlements,
+        preview_mode: false,
         validation: result,
+        entitlements,
       },
     });
   } catch (error: unknown) {

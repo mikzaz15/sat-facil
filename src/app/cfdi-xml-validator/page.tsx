@@ -19,16 +19,25 @@ type ValidationResult = {
   detected_rules: string[];
 };
 
+type ValidationSummary = {
+  status: "Válido" | "Inválido";
+  errors_count: number;
+  warnings_count: number;
+};
+
 type ApiPayload = {
   ok: boolean;
   data?: {
-    validation: ValidationResult;
+    preview_mode?: boolean;
+    validation?: ValidationResult;
+    validation_summary?: ValidationSummary;
     entitlements?: {
       isPro?: boolean;
       canUseXmlValidator?: boolean;
     };
   };
   code?: string;
+  message?: string;
   entitlements?: {
     isPro?: boolean;
     canUseXmlValidator?: boolean;
@@ -390,7 +399,12 @@ export default function CfdiXmlValidatorPage() {
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [freeLimitReached, setFreeLimitReached] = useState(false);
   const [canCorrectXml, setCanCorrectXml] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewSummary, setPreviewSummary] = useState<ValidationSummary | null>(
+    null,
+  );
   const [rawXmlText, setRawXmlText] = useState("");
   const [correctionError, setCorrectionError] = useState("");
   const [correctionPreview, setCorrectionPreview] = useState<XmlCorrectionPreview[]>(
@@ -441,9 +455,12 @@ export default function CfdiXmlValidatorPage() {
   async function runValidation(payload: ExtractedCfdi) {
     setLoading(true);
     setApiError("");
+    setFreeLimitReached(false);
+    setPreviewMode(false);
+    setPreviewSummary(null);
 
     try {
-      const response = await fetch("/api/cfdi-validate", {
+      const response = await fetch("/api/cfdi-xml-validator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -454,14 +471,18 @@ export default function CfdiXmlValidatorPage() {
           regimen_fiscal: payload.regimen_fiscal.trim(),
           currency: payload.currency.trim().toUpperCase(),
           payment_date: payload.payment_date || null,
+          file_name: fileName || "cfdi.xml",
+          source_page: "/cfdi-xml-validator",
           mode: "xml",
         }),
       });
 
       const apiPayload = (await response.json()) as ApiPayload;
-      if (!response.ok || !apiPayload.ok || !apiPayload.data?.validation) {
+      if (!response.ok || !apiPayload.ok || !apiPayload.data) {
         setValidation(null);
         setCanCorrectXml(false);
+        setPreviewMode(false);
+        setPreviewSummary(null);
         if (apiPayload.code === "AUTH_REQUIRED") {
           setApiError("Inicia sesión para usar Validar XML CFDI.");
           return;
@@ -470,11 +491,53 @@ export default function CfdiXmlValidatorPage() {
           setApiError("Validar XML CFDI requiere Plan Pro.");
           return;
         }
+        if (
+          apiPayload.code === "FREE_LIMIT_REACHED" ||
+          apiPayload.error === "free_limit_reached"
+        ) {
+          setFreeLimitReached(true);
+          setApiError(
+            apiPayload.message ||
+              "Has alcanzado el límite gratuito de validaciones hoy. Mejora a Pro para validaciones ilimitadas.",
+          );
+          return;
+        }
         setApiError(apiPayload.error || "No se pudo validar el CFDI.");
         return;
       }
 
+      if (apiPayload.data.preview_mode) {
+        if (!apiPayload.data.validation_summary) {
+          setValidation(null);
+          setCanCorrectXml(false);
+          setPreviewMode(false);
+          setPreviewSummary(null);
+          setApiError("No se pudo generar el resumen de validación.");
+          return;
+        }
+
+        setValidation(null);
+        setCanCorrectXml(false);
+        setCorrectionError("");
+        setCorrectionPreview([]);
+        setCorrectedXml("");
+        setPreviewMode(true);
+        setPreviewSummary(apiPayload.data.validation_summary);
+        return;
+      }
+
+      if (!apiPayload.data.validation) {
+        setValidation(null);
+        setCanCorrectXml(false);
+        setPreviewMode(false);
+        setPreviewSummary(null);
+        setApiError("No se pudo validar el CFDI.");
+        return;
+      }
+
       setValidation(apiPayload.data.validation);
+      setPreviewMode(false);
+      setPreviewSummary(null);
       setCanCorrectXml(
         Boolean(
           apiPayload.data.entitlements?.isPro ??
@@ -485,7 +548,7 @@ export default function CfdiXmlValidatorPage() {
     } catch {
       setValidation(null);
       setCanCorrectXml(false);
-      setApiError("Error de conexión con /api/cfdi-validate.");
+      setApiError("Error de conexión con /api/cfdi-xml-validator.");
     } finally {
       setLoading(false);
     }
@@ -498,6 +561,9 @@ export default function CfdiXmlValidatorPage() {
     setFileName(file.name);
     setXmlError("");
     setApiError("");
+    setFreeLimitReached(false);
+    setPreviewMode(false);
+    setPreviewSummary(null);
     setCorrectionError("");
     setCorrectionPreview([]);
     setCorrectedXml("");
@@ -520,7 +586,7 @@ export default function CfdiXmlValidatorPage() {
   async function downloadCorrectedXml() {
     if (!canCorrectXml) {
       setCorrectionError(
-        "La descarga del XML corregido está disponible en el Plan Pro.",
+        "La corrección automática de XML está disponible en Plan Pro.",
       );
       return;
     }
@@ -543,7 +609,7 @@ export default function CfdiXmlValidatorPage() {
       }
       if (logPayload.code === "PRO_REQUIRED_XML") {
         setCorrectionError(
-          "La descarga del XML corregido está disponible en el Plan Pro.",
+          "La corrección automática de XML está disponible en Plan Pro.",
         );
         setCanCorrectXml(false);
         return;
@@ -611,30 +677,30 @@ export default function CfdiXmlValidatorPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-8">
-      <header className="space-y-2">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-6 md:py-10">
+      <header className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-wide text-sky-700">
           SAT Fácil
         </p>
-        <h1 className="text-3xl font-semibold text-slate-900">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
           Validar XML CFDI
         </h1>
-        <p className="text-sm text-slate-700">
-          Sube un XML CFDI, extrae campos clave y valida configuración SAT de
-          forma automática.
+        <p className="max-w-3xl text-sm leading-relaxed text-slate-700">
+          Sube tu XML, revisa validaciones SAT y genera una propuesta de
+          corrección antes de timbrar.
         </p>
       </header>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="text-xs text-slate-700">
-            Puedes validar XML en Plan Gratis. La descarga de XML corregido es
-            exclusiva de Plan Pro.
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 px-4 py-3">
+          <p className="text-xs leading-relaxed text-slate-700 md:text-sm">
+            Plan Gratis: validación y vista previa de corrección. Plan Pro:
+            descarga de XML corregido y flujo completo de corrección.
           </p>
           <div className="flex items-center gap-2">
             <Link
               href="/login?next=/cfdi-xml-validator"
-              className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-800 hover:bg-slate-100"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-white"
             >
               Iniciar sesión
             </Link>
@@ -642,9 +708,9 @@ export default function CfdiXmlValidatorPage() {
               type="button"
               onClick={() => void startUpgradeCheckout()}
               disabled={checkoutLoading}
-              className="rounded-md bg-sky-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              {checkoutLoading ? "Abriendo Stripe..." : "Mejorar a Pro ($9/mes)"}
+              {checkoutLoading ? "Abriendo Stripe..." : "Activar Plan Pro ($9/mes)"}
             </button>
           </div>
         </div>
@@ -656,10 +722,10 @@ export default function CfdiXmlValidatorPage() {
           type="file"
           accept=".xml,text/xml,application/xml"
           onChange={onFileSelected}
-          className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+          className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
         />
         {fileName ? (
-          <p className="mt-2 text-xs text-slate-600">Archivo: {fileName}</p>
+          <p className="mt-2 text-xs font-medium text-slate-600">Archivo: {fileName}</p>
         ) : null}
         {loading ? <p className="mt-2 text-sm text-slate-600">Validando...</p> : null}
         {xmlError ? (
@@ -668,120 +734,200 @@ export default function CfdiXmlValidatorPage() {
           </p>
         ) : null}
         {apiError ? (
-          <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {apiError}
-          </p>
+          freeLimitReached ? (
+            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              <p className="font-semibold">⚠ Límite gratuito alcanzado</p>
+              <p className="mt-1">Mejora a Pro para validaciones ilimitadas</p>
+              <Link
+                href="/pricing"
+                className="mt-3 inline-flex rounded-md bg-sky-700 px-3 py-2 text-xs font-medium text-white hover:bg-sky-800"
+              >
+                Ver planes
+              </Link>
+            </div>
+          ) : (
+            <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {apiError}
+            </p>
+          )
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Campos extraídos</h2>
-        {!hasExtractedCoreFields ? (
-          <p className="mt-2 text-sm text-slate-600">
-            Sube un XML para extraer campos CFDI.
-          </p>
-        ) : (
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
-            <Field label="tipo_comprobante" value={extracted.tipo_comprobante} />
-            <Field label="metodo_pago" value={extracted.metodo_pago} />
-            <Field label="forma_pago" value={extracted.forma_pago} />
-            <Field label="uso_cfdi" value={extracted.uso_cfdi} />
-            <Field label="regimen_fiscal" value={extracted.regimen_fiscal} />
-            <Field label="moneda" value={extracted.currency} />
-            <Field label="fecha_pago" value={extracted.payment_date || "(vacío)"} />
-          </div>
-        )}
-      </section>
+      {!previewMode && validation ? (
+        <>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <h2 className="text-base font-semibold text-slate-900">Campos extraídos</h2>
+            {!hasExtractedCoreFields ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Sube un XML para extraer campos CFDI.
+              </p>
+            ) : (
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                <Field label="tipo_comprobante" value={extracted.tipo_comprobante} />
+                <Field label="metodo_pago" value={extracted.metodo_pago} />
+                <Field label="forma_pago" value={extracted.forma_pago} />
+                <Field label="uso_cfdi" value={extracted.uso_cfdi} />
+                <Field label="regimen_fiscal" value={extracted.regimen_fiscal} />
+                <Field label="moneda" value={extracted.currency} />
+                <Field label="fecha_pago" value={extracted.payment_date || "(vacío)"} />
+              </div>
+            )}
+          </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">
-          Impuestos detectados
-        </h2>
-        {!hasExtractedCoreFields ? (
-          <p className="mt-2 text-sm text-slate-600">
-            Sube un XML para ver impuestos detectados.
-          </p>
-        ) : (
-          <div className="mt-3 space-y-3 text-sm text-slate-700">
-            <p>
-              <span className="font-medium">Total trasladados:</span>{" "}
-              {extracted.taxes.total_trasladados || "(no informado)"}
-            </p>
-            <p>
-              <span className="font-medium">Total retenidos:</span>{" "}
-              {extracted.taxes.total_retenidos || "(no informado)"}
-            </p>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <h2 className="text-base font-semibold text-slate-900">
+              Impuestos detectados
+            </h2>
+            {!hasExtractedCoreFields ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Sube un XML para ver impuestos detectados.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <p>
+                  <span className="font-medium">Total trasladados:</span>{" "}
+                  {extracted.taxes.total_trasladados || "(no informado)"}
+                </p>
+                <p>
+                  <span className="font-medium">Total retenidos:</span>{" "}
+                  {extracted.taxes.total_retenidos || "(no informado)"}
+                </p>
 
-            <div>
-              <p className="font-medium">Traslados</p>
-              {extracted.taxes.traslados.length === 0 ? (
-                <p className="text-slate-600">(sin traslados detectados)</p>
-              ) : (
-                <ul className="mt-1 list-disc space-y-1 pl-5">
-                  {extracted.taxes.traslados.map((item, index) => (
-                    <li key={`traslado-${index}`}>
-                      Impuesto {item.impuesto || "?"}, Tasa {item.tasa_o_cuota || "?"},
-                      Importe {item.importe || "?"}, Base {item.base || "?"}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                <div>
+                  <p className="font-medium">Traslados</p>
+                  {extracted.taxes.traslados.length === 0 ? (
+                    <p className="text-slate-600">(sin traslados detectados)</p>
+                  ) : (
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      {extracted.taxes.traslados.map((item, index) => (
+                        <li key={`traslado-${index}`}>
+                          Impuesto {item.impuesto || "?"}, Tasa {item.tasa_o_cuota || "?"},
+                          Importe {item.importe || "?"}, Base {item.base || "?"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-            <div>
-              <p className="font-medium">Retenciones</p>
-              {extracted.taxes.retenciones.length === 0 ? (
-                <p className="text-slate-600">(sin retenciones detectadas)</p>
-              ) : (
-                <ul className="mt-1 list-disc space-y-1 pl-5">
-                  {extracted.taxes.retenciones.map((item, index) => (
-                    <li key={`retencion-${index}`}>
-                      Impuesto {item.impuesto || "?"}, Tasa {item.tasa_o_cuota || "?"},
-                      Importe {item.importe || "?"}, Base {item.base || "?"}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
+                <div>
+                  <p className="font-medium">Retenciones</p>
+                  {extracted.taxes.retenciones.length === 0 ? (
+                    <p className="text-slate-600">(sin retenciones detectadas)</p>
+                  ) : (
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      {extracted.taxes.retenciones.map((item, index) => (
+                        <li key={`retencion-${index}`}>
+                          Impuesto {item.impuesto || "?"}, Tasa {item.tasa_o_cuota || "?"},
+                          Importe {item.importe || "?"}, Base {item.base || "?"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        </>
+      ) : null}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <h2 className="text-base font-semibold text-slate-900">
           Resultados de validación
         </h2>
-        {!validation ? (
+        {!validation && !previewSummary ? (
           <p className="mt-2 text-sm text-slate-600">
-            Sube un XML válido para ejecutar /api/cfdi-validate.
+            Sube un XML válido para ejecutar /api/cfdi-xml-validator.
           </p>
-        ) : (
-          <div className="mt-3 space-y-4">
+        ) : previewMode && previewSummary ? (
+          <div className="mt-4 space-y-4">
             <article
-              className={`rounded-md border px-3 py-2 text-sm font-medium ${
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                previewSummary.status === "Válido"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-red-200 bg-red-50 text-red-800"
+              }`}
+            >
+              <span className="mr-2 inline-block rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">
+                Estado de validación
+              </span>
+              {previewSummary.status}
+            </article>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <article className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                  Errores
+                </p>
+                <p className="mt-1 text-2xl font-semibold text-red-900">
+                  {previewSummary.errors_count}
+                </p>
+              </article>
+              <article className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  Advertencias
+                </p>
+                <p className="mt-1 text-2xl font-semibold text-amber-900">
+                  {previewSummary.warnings_count}
+                </p>
+              </article>
+            </div>
+
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <p className="text-sm font-medium text-slate-900">
+                Para ver el detalle completo del diagnóstico y descargar el XML
+                corregido, crea una cuenta gratuita.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+                >
+                  Crear cuenta gratis
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : validation ? (
+          <div className="mt-4 space-y-5">
+            <article
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
                 validation.is_valid
                   ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : "border-red-200 bg-red-50 text-red-800"
               }`}
             >
-              Estado de validación: {validation.is_valid ? "Válido" : "Inválido"}
+              <span className="mr-2 inline-block rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">
+                Estado de validación
+              </span>
+              {validation.is_valid ? "Válido" : "Inválido"}
             </article>
 
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Errores</p>
+            <article className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-900">Errores</p>
+                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                  {validation.errors.length}
+                </span>
+              </div>
               {validation.errors.length === 0 ? (
                 <p className="mt-1 text-sm text-slate-600">Sin errores bloqueantes.</p>
               ) : (
                 <div>
-                  <ul className="mt-2 space-y-2">
+                  <ul className="mt-3 space-y-2">
                     {validation.errors.map((issue) => (
                       <li
                         key={`error-${issue.code}-${issue.message}`}
-                        className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900"
+                        className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900"
                       >
                         <p className="font-semibold">{issue.code}</p>
-                        <p>{issue.message}</p>
-                        <p>
+                        <p className="mt-1">{issue.message}</p>
+                        <p className="mt-1">
                           <span className="font-medium">Corrección: </span>
                           {issue.fix}
                         </p>
@@ -791,28 +937,33 @@ export default function CfdiXmlValidatorPage() {
                   <button
                     type="button"
                     onClick={() => void onAutoCorrectXml()}
-                    className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white"
+                    className="mt-4 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                   >
                     Corregir este CFDI
                   </button>
                 </div>
               )}
-            </div>
+            </article>
 
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Advertencias</p>
+            <article className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-900">Advertencias</p>
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                  {validation.warnings.length}
+                </span>
+              </div>
               {validation.warnings.length === 0 ? (
                 <p className="mt-1 text-sm text-slate-600">Sin advertencias.</p>
               ) : (
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-3 space-y-2">
                   {validation.warnings.map((issue) => (
                     <li
                       key={`warn-${issue.code}-${issue.message}`}
-                      className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                      className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
                     >
                       <p className="font-semibold">{issue.code}</p>
-                      <p>{issue.message}</p>
-                      <p>
+                      <p className="mt-1">{issue.message}</p>
+                      <p className="mt-1">
                         <span className="font-medium">Sugerencia: </span>
                         {issue.fix}
                       </p>
@@ -820,9 +971,9 @@ export default function CfdiXmlValidatorPage() {
                   ))}
                 </ul>
               )}
-            </div>
+            </article>
 
-            <div>
+            <article className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <p className="text-sm font-semibold text-slate-900">
                 Correcciones sugeridas
               </p>
@@ -837,9 +988,9 @@ export default function CfdiXmlValidatorPage() {
                   ))}
                 </ol>
               )}
-            </div>
+            </article>
 
-            <div>
+            <article className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <p className="text-sm font-semibold text-slate-900">
                 Reglas SAT detectadas
               </p>
@@ -859,40 +1010,53 @@ export default function CfdiXmlValidatorPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </article>
 
             {correctionError ? (
-              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
                 {correctionError}
               </p>
             ) : null}
 
             {correctionPreview.length > 0 ? (
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Vista previa de valores corregidos
-                </p>
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
-                    <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">
+                    Vista previa de valores corregidos
+                  </p>
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    Cambios: {correctionPreview.length}
+                  </span>
+                </div>
+                <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[760px] text-left text-sm text-slate-800">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
-                        <th className="px-2 py-2">Código</th>
-                        <th className="px-2 py-2">Atributo XML</th>
-                        <th className="px-2 py-2">Valor actual</th>
-                        <th className="px-2 py-2">Valor corregido</th>
-                        <th className="px-2 py-2">Explicación</th>
-                        <th className="px-2 py-2">Corrección sugerida</th>
+                        <th className="px-3 py-2">Código</th>
+                        <th className="px-3 py-2">Atributo XML</th>
+                        <th className="px-3 py-2">Valor actual</th>
+                        <th className="px-3 py-2">Valor corregido</th>
+                        <th className="px-3 py-2">Explicación</th>
+                        <th className="px-3 py-2">Corrección sugerida</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {correctionPreview.map((row, index) => (
                         <tr key={`${row.code}-${row.attribute}-${index}`}>
-                          <td className="px-2 py-2 font-medium">{row.code}</td>
-                          <td className="px-2 py-2">{row.attribute}</td>
-                          <td className="px-2 py-2">{row.previousValue}</td>
-                          <td className="px-2 py-2">{row.correctedValue}</td>
-                          <td className="px-2 py-2">{row.explanation}</td>
-                          <td className="px-2 py-2">{row.suggestedFix}</td>
+                          <td className="px-3 py-2 font-semibold text-slate-900">{row.code}</td>
+                          <td className="px-3 py-2">{row.attribute}</td>
+                          <td className="px-3 py-2">
+                            <span className="rounded-md bg-rose-50 px-2 py-1 text-rose-800 line-through">
+                              {row.previousValue}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-800">
+                              {row.correctedValue}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">{row.explanation}</td>
+                          <td className="px-3 py-2">{row.suggestedFix}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -902,19 +1066,20 @@ export default function CfdiXmlValidatorPage() {
                   type="button"
                   onClick={() => void downloadCorrectedXml()}
                   disabled={!canCorrectXml}
-                  className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  className="mt-4 inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 >
                   Descargar XML corregido
                 </button>
                 {!canCorrectXml ? (
-                  <p className="mt-2 text-sm text-amber-700">
-                    La descarga del XML corregido está disponible en el Plan Pro.
+                  <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Descarga premium: actualiza a Plan Pro para descargar el XML
+                    corregido automáticamente.
                   </p>
                 ) : null}
               </div>
             ) : null}
           </div>
-        )}
+        ) : null}
       </section>
     </main>
   );
@@ -922,7 +1087,7 @@ export default function CfdiXmlValidatorPage() {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-3">
+    <article className="rounded-xl border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
         {label}
       </p>

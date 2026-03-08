@@ -26,6 +26,7 @@ type ApiPayload = {
   };
   code?: string;
   entitlements?: SatEntitlements;
+  message?: string;
   error?: string;
 };
 
@@ -139,6 +140,7 @@ export default function ValidateCfdiPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [entitlements, setEntitlements] = useState<SatEntitlements | null>(null);
   const [error, setError] = useState("");
+  const [freeLimitReached, setFreeLimitReached] = useState(false);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 
   const hasXmlFields = useMemo(() => {
@@ -207,6 +209,7 @@ export default function ValidateCfdiPage() {
   async function runValidation(input: ValidationInput) {
     setLoading(true);
     setError("");
+    setFreeLimitReached(false);
 
     try {
       const response = await fetch("/api/cfdi-validate", {
@@ -220,6 +223,8 @@ export default function ValidateCfdiPage() {
           regimen_fiscal: input.regimen_fiscal.trim(),
           currency: input.currency.trim().toUpperCase(),
           payment_date: input.payment_date || null,
+          file_name: mode === "xml" ? fileName || "cfdi.xml" : undefined,
+          source_page: "/validate-cfdi",
           mode,
         }),
       });
@@ -243,8 +248,19 @@ export default function ValidateCfdiPage() {
         }
 
         if (payload.code === "FREE_LIMIT_REACHED") {
+          setFreeLimitReached(true);
           setError(
-            "Has alcanzado el límite gratuito de validaciones. Mejora a Plan Pro para validaciones ilimitadas.",
+            payload.message ||
+              "Has alcanzado el límite gratuito de validaciones hoy. Mejora a Pro para validaciones ilimitadas.",
+          );
+          return;
+        }
+
+        if (payload.error === "free_limit_reached") {
+          setFreeLimitReached(true);
+          setError(
+            payload.message ||
+              "Has alcanzado el límite gratuito de validaciones hoy. Mejora a Pro para validaciones ilimitadas.",
           );
           return;
         }
@@ -278,6 +294,7 @@ export default function ValidateCfdiPage() {
     setFileName(file.name);
     setValidation(null);
     setError("");
+    setFreeLimitReached(false);
 
     try {
       const xmlText = await file.text();
@@ -567,9 +584,22 @@ export default function ValidateCfdiPage() {
           </p>
         ) : null}
         {error ? (
-          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {error}
-          </p>
+          freeLimitReached ? (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              <p className="font-semibold">⚠ Límite gratuito alcanzado</p>
+              <p className="mt-1">Mejora a Pro para validaciones ilimitadas</p>
+              <Link
+                href="/pricing"
+                className="mt-3 inline-flex rounded-md bg-sky-700 px-3 py-2 text-xs font-medium text-white hover:bg-sky-800"
+              >
+                Ver planes
+              </Link>
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {error}
+            </p>
+          )
         ) : null}
       </section>
 

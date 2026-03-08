@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+
 import { loginAction } from "./actions";
 
 const DEFAULT_AUTH_REDIRECT = "/validate-cfdi";
@@ -45,7 +47,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
 
-        <form action={loginAction} className="mt-6 space-y-4">
+        <div className="mt-6">
+          <GoogleAuthButton errorPath="/login" />
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-500">o continuar con</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <form action={loginAction} className="mt-4 space-y-4">
           <input type="hidden" name="next" value={nextPath} />
 
           <div>
@@ -90,7 +102,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <p className="mt-6 text-sm text-slate-600">
           ¿Nuevo en SAT Fácil?{" "}
-          <Link href="/signup" className="font-medium text-slate-900 underline">
+          <Link
+            href={`/signup?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-slate-900 underline"
+          >
             Crear cuenta
           </Link>
         </p>

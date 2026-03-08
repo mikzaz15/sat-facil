@@ -6,6 +6,30 @@ import { useState } from "react";
 export default function PricingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const isDevelopment = process.env.NODE_ENV !== "production";
+
+  function withDevStripeHint(message: string): string {
+    if (!isDevelopment) return message;
+
+    const missingVars: string[] = [];
+    if (/STRIPE_PRICE_PRO_MONTHLY/i.test(message)) {
+      missingVars.push("STRIPE_PRICE_PRO_MONTHLY");
+    }
+    if (/STRIPE_SECRET_KEY/i.test(message)) {
+      missingVars.push("STRIPE_SECRET_KEY");
+    }
+    if (/STRIPE_WEBHOOK_SECRET/i.test(message)) {
+      missingVars.push("STRIPE_WEBHOOK_SECRET");
+    }
+
+    if (missingVars.length === 0) {
+      return message;
+    }
+
+    return `${message} (Dev: revisa ${missingVars.join(
+      ", ",
+    )} en .env.local y en variables de entorno de Vercel).`;
+  }
 
   async function startUpgradeCheckout() {
     setLoading(true);
@@ -21,7 +45,11 @@ export default function PricingPage() {
       };
 
       if (!response.ok || !payload.ok || !payload.data?.checkout_url) {
-        setError(payload.error || "No se pudo iniciar el proceso de pago.");
+        setError(
+          withDevStripeHint(
+            payload.error || "No se pudo iniciar el proceso de pago.",
+          ),
+        );
         return;
       }
 
@@ -34,57 +62,104 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-8">
-      <header className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-sky-700">
-          SAT Fácil
-        </p>
-        <h1 className="text-3xl font-semibold text-slate-900">Planes</h1>
-        <p className="text-sm text-slate-700">
-          Suscripciones para validar CFDI antes de timbrar.
-        </p>
-      </header>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Gratuito</h2>
-          <p className="mt-1 text-sm text-slate-700">$0 / mes</p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-            <li>5 validaciones CFDI por día</li>
-            <li>Validación manual de campos</li>
-          </ul>
-        </article>
-
-        <article className="rounded-xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Pro</h2>
-          <p className="mt-1 text-sm text-slate-700">$9 / mes</p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-            <li>Validaciones ilimitadas</li>
-            <li>Acceso a Validar XML CFDI</li>
-            <li>Acceso al Asistente SAT</li>
-          </ul>
-          <button
-            type="button"
-            onClick={() => void startUpgradeCheckout()}
-            disabled={loading}
-            className="mt-4 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {loading ? "Abriendo Stripe..." : "Mejorar a Pro"}
-          </button>
-          <p className="mt-2 text-xs text-slate-600">
-            Requiere sesión iniciada.{" "}
-            <Link href="/login?next=/pricing" className="underline">
-              Iniciar sesión
-            </Link>
+    <main className="bg-gradient-to-b from-slate-50 via-white to-sky-50/30">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-10 md:px-6 md:py-14">
+        <header className="space-y-3 text-center md:text-left">
+          <p className="text-xs font-medium uppercase tracking-wide text-sky-700">
+            SAT Fácil
           </p>
-        </article>
-      </section>
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+            Planes para validar CFDI con confianza
+          </h1>
+          <p className="mx-auto max-w-3xl text-sm leading-relaxed text-slate-700 md:mx-0 md:text-base">
+            Elige el plan que mejor se adapta a tu operación. Empieza gratis y
+            mejora a Pro cuando necesites mayor velocidad, automatización y
+            cobertura para tu equipo contable.
+          </p>
+        </header>
 
-      {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      ) : null}
+        <section className="grid gap-5 md:grid-cols-2">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Plan Free
+              </p>
+              <h2 className="text-2xl font-semibold text-slate-900">Gratis</h2>
+              <p className="text-sm text-slate-600">$0 MXN / mes</p>
+            </div>
+
+            <ul className="mt-5 space-y-2 text-sm text-slate-700">
+              <li>5 validaciones CFDI por día</li>
+              <li>Validación manual de campos CFDI</li>
+              <li>Explicación base de errores SAT</li>
+              <li>Vista previa de correcciones XML</li>
+            </ul>
+
+            <Link
+              href="/validate-cfdi"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              Comenzar gratis
+            </Link>
+          </article>
+
+          <article className="relative rounded-2xl border-2 border-sky-300 bg-gradient-to-b from-sky-50 to-white p-7 shadow-lg md:p-8">
+            <span className="absolute -top-3 right-4 inline-flex rounded-full bg-sky-700 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+              Más popular
+            </span>
+
+            <div className="space-y-1">
+              <p className="text-sm font-semibold uppercase tracking-wide text-sky-700">
+                Plan Pro
+              </p>
+              <h2 className="text-2xl font-semibold text-slate-900">Pro</h2>
+              <p className="text-sm text-slate-700">$9 USD / mes</p>
+              <p className="text-sm font-medium text-sky-800">
+                Recomendado para despachos contables
+              </p>
+            </div>
+
+            <ul className="mt-5 space-y-2 text-sm text-slate-700">
+              <li>Validaciones CFDI ilimitadas</li>
+              <li>Acceso completo a Validar XML CFDI</li>
+              <li>Descarga de XML corregido</li>
+              <li>Asistente SAT con contexto documental</li>
+              <li>Flujo optimizado para despacho contable</li>
+            </ul>
+
+            <button
+              type="button"
+              onClick={() => void startUpgradeCheckout()}
+              disabled={loading}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {loading ? "Abriendo Stripe..." : "Mejorar a Pro"}
+            </button>
+            <p className="mt-2 text-xs text-slate-600">
+              Requiere sesión iniciada.{" "}
+              <Link href="/login?next=/pricing" className="font-medium underline">
+                Iniciar sesión
+              </Link>
+            </p>
+          </article>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-slate-900">
+            ¿Por qué despachos contables eligen SAT Fácil?
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-700">
+            SAT Fácil reduce retrabajo por rechazo de timbrado, estandariza
+            criterios CFDI y acelera la revisión previa al envío al PAC.
+          </p>
+        </section>
+
+        {error ? (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </main>
   );
 }

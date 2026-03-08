@@ -1,15 +1,31 @@
 import Link from "next/link";
 
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+
 import { signupAction } from "./actions";
+
+const DEFAULT_AUTH_REDIRECT = "/cfdi-xml-validator";
+
+function isSafeInternalPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//");
+}
 
 type SignupPageProps = {
   searchParams: Promise<{
     error?: string;
+    next?: string;
   }>;
 };
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams;
+  const nextCandidate = typeof params.next === "string" ? params.next.trim() : "";
+  const nextPath =
+    isSafeInternalPath(nextCandidate) &&
+    nextCandidate !== "/app" &&
+    !nextCandidate.startsWith("/app/")
+      ? nextCandidate
+      : DEFAULT_AUTH_REDIRECT;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
@@ -31,7 +47,18 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           </p>
         ) : null}
 
-        <form action={signupAction} className="mt-6 space-y-4">
+        <div className="mt-6">
+          <GoogleAuthButton errorPath="/signup" />
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-500">o continuar con</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <form action={signupAction} className="mt-4 space-y-4">
+          <input type="hidden" name="next" value={nextPath} />
           <div>
             <label
               htmlFor="fullName"
@@ -91,7 +118,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
         <p className="mt-6 text-sm text-slate-600">
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/login" className="font-medium text-slate-900 underline">
+          <Link
+            href={`/login?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-slate-900 underline"
+          >
             Iniciar sesión
           </Link>
         </p>

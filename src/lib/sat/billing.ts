@@ -45,7 +45,11 @@ function todayUtcRange(): { startIso: string; endIso: string } {
 }
 
 function toPlan(value: string | null | undefined): SatPlan {
-  return value === "pro" ? "pro" : "free";
+  const normalized = (value || "").trim().toLowerCase();
+  if (normalized === "pro" || normalized === "studio") {
+    return "pro";
+  }
+  return "free";
 }
 
 function toValidationCount(value: unknown): number {
@@ -123,9 +127,10 @@ export async function getSatEntitlements(
   const { startIso, endIso } = todayUtcRange();
 
   const usage = await supabase
-    .from("validation_logs")
+    .from("analytics_events")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
+    .eq("event_name", "validation_run")
     .gte("created_at", startIso)
     .lt("created_at", endIso);
 
@@ -167,7 +172,7 @@ export async function assertValidationAccess(
     return {
       allowed: false,
       code: "PRO_REQUIRED_XML",
-      message: "La descarga del XML corregido está disponible en el Plan Pro.",
+      message: "La corrección automática de XML está disponible en Plan Pro.",
       entitlements,
     };
   }

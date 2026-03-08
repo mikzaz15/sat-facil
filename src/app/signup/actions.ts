@@ -5,6 +5,30 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/auth-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const DEFAULT_GOOGLE_REDIRECT = "/cfdi-xml-validator";
+
+function isSafeInternalPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//");
+}
+
+function getNextPath(formData: FormData) {
+  const nextValue = formData.get("next");
+  if (typeof nextValue !== "string") {
+    return DEFAULT_GOOGLE_REDIRECT;
+  }
+
+  const nextPath = nextValue.trim();
+  if (!isSafeInternalPath(nextPath)) {
+    return DEFAULT_GOOGLE_REDIRECT;
+  }
+
+  if (nextPath === "/app" || nextPath.startsWith("/app/")) {
+    return DEFAULT_GOOGLE_REDIRECT;
+  }
+
+  return nextPath;
+}
+
 async function ensureUserProfile(params: {
   userId: string;
   email: string;
@@ -34,6 +58,7 @@ export async function signupAction(formData: FormData) {
   const fullName = typeof fullNameValue === "string" ? fullNameValue : null;
   const email = typeof emailValue === "string" ? emailValue : null;
   const password = typeof passwordValue === "string" ? passwordValue : null;
+  const nextPath = getNextPath(formData);
 
   if (!email || !password) {
     redirect("/signup?error=Ingresa+correo+electr%C3%B3nico+y+contrase%C3%B1a.");
@@ -85,5 +110,5 @@ export async function signupAction(formData: FormData) {
     }
   }
 
-  redirect("/validate-cfdi");
+  redirect(nextPath);
 }

@@ -10,19 +10,19 @@ function isSafeInternalPath(value: string) {
   return value.startsWith("/") && !value.startsWith("//");
 }
 
-function getNextPath(formData: FormData) {
+function getNextPath(formData: FormData, defaultPath = DEFAULT_AUTH_REDIRECT) {
   const nextValue = formData.get("next");
   if (typeof nextValue !== "string") {
-    return DEFAULT_AUTH_REDIRECT;
+    return defaultPath;
   }
 
   const nextPath = nextValue.trim();
   if (!isSafeInternalPath(nextPath)) {
-    return DEFAULT_AUTH_REDIRECT;
+    return defaultPath;
   }
 
   if (nextPath === "/app" || nextPath.startsWith("/app/")) {
-    return DEFAULT_AUTH_REDIRECT;
+    return defaultPath;
   }
 
   return nextPath;

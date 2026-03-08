@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { logSatAnalyticsEvent } from "@/lib/sat/analytics";
 import {
   assertValidationAccess,
   getSatEntitlements,
@@ -34,6 +35,24 @@ export async function POST() {
     }
 
     await incrementValidationUsage(supabase, user.id, "xml_fix");
+    try {
+      await logSatAnalyticsEvent(supabase, {
+        userId: user.id,
+        eventName: "corrected_xml_downloaded",
+        sourcePage: "/cfdi-xml-validator",
+        mode: "xml_fix",
+        plan: access.entitlements.plan,
+      });
+    } catch (analyticsError: unknown) {
+      const message =
+        analyticsError instanceof Error
+          ? analyticsError.message
+          : "unknown analytics error";
+      console.error(
+        `[SAT][ANALYTICS] Failed to log corrected_xml_downloaded: ${message}`,
+      );
+    }
+
     const entitlements = await getSatEntitlements(supabase, user.id);
 
     return NextResponse.json({

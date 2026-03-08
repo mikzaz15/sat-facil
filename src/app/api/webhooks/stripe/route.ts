@@ -5,6 +5,8 @@ import type Stripe from "stripe";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStripeServerClient } from "@/lib/stripe";
 
+export const runtime = "nodejs";
+
 type StripeIdValue = string | { id: string } | null | undefined;
 
 function stringId(value: StripeIdValue): string {
@@ -25,19 +27,43 @@ function satPlanFromSubscriptionStatus(status: string): "free" | "pro" {
   return "free";
 }
 
-async function resolveSatUserIdFromSubscription(
-  supabase: ReturnType<typeof createSupabaseServerClient>,
-  subscriptionId: string,
-  customerId: string,
-  fallbackUserId: string,
-): Promise<string> {
-  if (fallbackUserId) return fallbackUserId;
+function asTrimmedString(value: string | null | undefined): string {
+  return (value ?? "").trim();
+}
 
-  if (subscriptionId) {
-    const bySubscription = await supabase
+function satUserIdFromStripeCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): string {
+  if ("deleted" in customer && customer.deleted) return "";
+  return asTrimmedString(customer.metadata?.sat_user_id);
+}
+
+async function satUserIdFromCustomerMetadata(
+  stripe: Stripe,
+  customerId: string,
+): Promise<string> {
+  if (!customerId) return "";
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return satUserIdFromStripeCustomer(customer);
+  } catch {
+    return "";
+  }
+}
+
+async function resolveSatUserIdFromSubscription(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  stripe: Stripe;
+  subscriptionId: string;
+  customerId: string;
+  fallbackUserId: string;
+}): Promise<string> {
+  const directFallback = asTrimmedString(params.fallbackUserId);
+  if (directFallback) return directFallback;
+
+  if (params.subscriptionId) {
+    const bySubscription = await params.supabase
       .from("sat_subscriptions")
       .select("user_id")
-      .eq("stripe_subscription_id", subscriptionId)
+      .eq("stripe_subscription_id", params.subscriptionId)
       .maybeSingle();
 
     if (!bySubscription.error && bySubscription.data?.user_id) {
@@ -45,17 +71,23 @@ async function resolveSatUserIdFromSubscription(
     }
   }
 
-  if (customerId) {
-    const byCustomer = await supabase
+  if (params.customerId) {
+    const byCustomer = await params.supabase
       .from("sat_subscriptions")
       .select("user_id")
-      .eq("stripe_customer_id", customerId)
+      .eq("stripe_customer_id", params.customerId)
       .maybeSingle();
 
     if (!byCustomer.error && byCustomer.data?.user_id) {
       return byCustomer.data.user_id as string;
     }
   }
+
+  const fromCustomerMetadata = await satUserIdFromCustomerMetadata(
+    params.stripe,
+    params.customerId,
+  );
+  if (fromCustomerMetadata) return fromCustomerMetadata;
 
   return "";
 }
@@ -70,7 +102,12 @@ async function upsertSatSubscriptionState(params: {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
 }) {
-  if (!params.userId) return;
+  if (!params.userId) {
+    console.warn(
+      `[SAT][STRIPE] Could not resolve user_id for subscription ${params.subscriptionId || "(none)"} customer ${params.customerId || "(none)"}`,
+    );
+    return;
+  }
 
   const { error } = await params.supabase.from("sat_subscriptions").upsert(
     {
@@ -156,12 +193,13 @@ async function handleSatSubscriptionCheckoutCompleted(params: {
 
   const subscription = await params.stripe.subscriptions.retrieve(subscriptionId);
   const subscriptionData = subscription as unknown as Stripe.Subscription;
-  const userId = await resolveSatUserIdFromSubscription(
-    params.supabase,
+  const userId = await resolveSatUserIdFromSubscription({
+    supabase: params.supabase,
+    stripe: params.stripe,
     subscriptionId,
     customerId,
-    candidateUserId,
-  );
+    fallbackUserId: candidateUserId,
+  });
   const periodEnd = subscriptionData.items.data[0]?.current_period_end ?? null;
 
   await upsertSatSubscriptionState({
@@ -178,17 +216,19 @@ async function handleSatSubscriptionCheckoutCompleted(params: {
 
 async function handleSubscriptionStateChange(params: {
   supabase: ReturnType<typeof createSupabaseServerClient>;
+  stripe: Stripe;
   subscription: Stripe.Subscription;
 }) {
   const subscriptionId = params.subscription.id;
   const customerId = stringId(params.subscription.customer);
-  const candidateUserId = (params.subscription.metadata?.sat_user_id ?? "").trim();
-  const userId = await resolveSatUserIdFromSubscription(
-    params.supabase,
+  const candidateUserId = asTrimmedString(params.subscription.metadata?.sat_user_id);
+  const userId = await resolveSatUserIdFromSubscription({
+    supabase: params.supabase,
+    stripe: params.stripe,
     subscriptionId,
     customerId,
-    candidateUserId,
-  );
+    fallbackUserId: candidateUserId,
+  });
 
   await upsertSatSubscriptionState({
     supabase: params.supabase,
@@ -203,6 +243,23 @@ async function handleSubscriptionStateChange(params: {
         ).toISOString()
       : null,
     cancelAtPeriodEnd: Boolean(params.subscription.cancel_at_period_end),
+  });
+}
+
+async function handleInvoiceSubscriptionEvent(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  stripe: Stripe;
+  invoice: Stripe.Invoice;
+}) {
+  const subscriptionId = stringId(
+    (params.invoice as unknown as { subscription?: StripeIdValue }).subscription,
+  );
+  if (!subscriptionId) return;
+  const subscription = await params.stripe.subscriptions.retrieve(subscriptionId);
+  await handleSubscriptionStateChange({
+    supabase: params.supabase,
+    stripe: params.stripe,
+    subscription: subscription as unknown as Stripe.Subscription,
   });
 }
 
@@ -231,7 +288,10 @@ export async function POST(request: Request) {
 
   const supabase = createSupabaseServerClient();
 
-  if (event.type === "checkout.session.completed") {
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
     const session = event.data.object as Stripe.Checkout.Session;
     try {
       if (session.mode === "subscription") {
@@ -260,7 +320,24 @@ export async function POST(request: Request) {
     try {
       await handleSubscriptionStateChange({
         supabase,
+        stripe,
         subscription: event.data.object as Stripe.Subscription,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Webhook error";
+      return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    }
+  }
+
+  if (
+    event.type === "invoice.payment_succeeded" ||
+    event.type === "invoice.payment_failed"
+  ) {
+    try {
+      await handleInvoiceSubscriptionEvent({
+        supabase,
+        stripe,
+        invoice: event.data.object as Stripe.Invoice,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Webhook error";

@@ -1,0 +1,283 @@
+[
+  {
+    "code": "CFDI40101",
+    "topic": "Comprobante",
+    "meaning": "El XML no cumple con una regla base de validación del comprobante.",
+    "why_it_happens": [
+      "Falta un atributo obligatorio en el nodo Comprobante.",
+      "El formato de un campo no coincide con Anexo 20."
+    ],
+    "how_to_fix": [
+      "Valida estructura XML y campos obligatorios antes de timbrar.",
+      "Corrige el atributo marcado por el PAC y vuelve a generar el XML."
+    ],
+    "example": "Si falta LugarExpedicion, agrega el código postal correcto del emisor y valida nuevamente."
+  },
+  {
+    "code": "CFDI40102",
+    "topic": "Estructura CFDI",
+    "meaning": "El CFDI contiene un error de forma o estructura en nodos principales.",
+    "why_it_happens": [
+      "Se omitió información obligatoria en Emisor o Receptor.",
+      "Se incluyó un valor con formato inválido."
+    ],
+    "how_to_fix": [
+      "Revisa cada nodo obligatorio y sus atributos.",
+      "Asegura tipos de dato y longitudes válidas según catálogo."
+    ],
+    "example": "Si UsoCFDI está vacío, captura una clave vigente como G03 o CP01 según el caso."
+  },
+  {
+    "code": "CFDI40105",
+    "topic": "Fechas",
+    "meaning": "La fecha/hora del CFDI no es válida para timbrado.",
+    "why_it_happens": [
+      "La zona horaria de emisión no coincide con configuración del sistema.",
+      "La fecha enviada es futura o fuera del rango permitido."
+    ],
+    "how_to_fix": [
+      "Sincroniza hora del servidor con una fuente NTP confiable.",
+      "Emite el CFDI con fecha/hora real de la operación."
+    ],
+    "example": "Si el servidor quedó adelantado 2 horas, corrige reloj del sistema y vuelve a timbrar."
+  },
+  {
+    "code": "CFDI40107",
+    "topic": "RFC receptor",
+    "meaning": "El RFC del receptor no cumple formato o validación SAT.",
+    "why_it_happens": [
+      "RFC con longitud incorrecta o caracteres inválidos.",
+      "Se capturó RFC genérico cuando no corresponde."
+    ],
+    "how_to_fix": [
+      "Confirma RFC en constancia fiscal del cliente.",
+      "Usa RFC genérico sólo en los supuestos permitidos por SAT."
+    ],
+    "example": "Si capturaste ABC123, reemplaza por un RFC válido de 12 o 13 caracteres."
+  },
+  {
+    "code": "CFDI40114",
+    "topic": "Totales e importes",
+    "meaning": "Los importes del CFDI no cuadran conforme a reglas de cálculo.",
+    "why_it_happens": [
+      "Subtotal, descuento, impuestos y total no son consistentes.",
+      "Se aplicó redondeo distinto al esperado por el PAC."
+    ],
+    "how_to_fix": [
+      "Recalcula importes con precisión fiscal y redondeo uniforme.",
+      "Verifica fórmula total = subtotal - descuento + impuestos."
+    ],
+    "example": "Si el total tiene 1 centavo de diferencia, recalcula bases e IVA con misma precisión."
+  },
+  {
+    "code": "CFDI40130",
+    "topic": "Uso CFDI",
+    "meaning": "La clave UsoCFDI es inválida o incompatible con el comprobante.",
+    "why_it_happens": [
+      "UsoCFDI no existe en catálogo vigente.",
+      "Se usa CP01 en un CFDI donde no aplica."
+    ],
+    "how_to_fix": [
+      "Selecciona una clave vigente de c_UsoCFDI.",
+      "Alinea uso con tipo de comprobante y operación."
+    ],
+    "example": "Para complemento de pagos usa CP01; para venta general puede aplicar G03."
+  },
+  {
+    "code": "CFDI40138",
+    "topic": "Método y forma de pago",
+    "meaning": "Existe inconsistencia entre MetodoPago y FormaPago.",
+    "why_it_happens": [
+      "Se captura PUE cuando el cobro será posterior.",
+      "Se usa PPD sin FormaPago 99 en CFDI de ingreso."
+    ],
+    "how_to_fix": [
+      "Usa PPD + FormaPago 99 cuando el pago es diferido/parcial.",
+      "Emite complemento de pagos al recibir cada cobro."
+    ],
+    "example": "Factura a crédito: emite PPD con FormaPago 99 y complementa al cobrar."
+  },
+  {
+    "code": "CFDI40145",
+    "topic": "Clave producto/servicio",
+    "meaning": "La clave de producto o servicio no es válida para la operación.",
+    "why_it_happens": [
+      "Se usó una clave inexistente o desactualizada en c_ClaveProdServ.",
+      "La clave no representa correctamente el concepto facturado."
+    ],
+    "how_to_fix": [
+      "Busca la clave vigente en catálogo SAT.",
+      "Mapea cada concepto comercial a una clave correcta."
+    ],
+    "example": "Si vendes consultoría y usaste una clave de mercancía, corrige al servicio correspondiente."
+  },
+  {
+    "code": "CFDI40148",
+    "topic": "Régimen fiscal",
+    "meaning": "El régimen fiscal es inválido o incompatible.",
+    "why_it_happens": [
+      "Clave de régimen no vigente.",
+      "No coincide con la situación fiscal del contribuyente."
+    ],
+    "how_to_fix": [
+      "Verifica régimen en constancia fiscal.",
+      "Actualiza la clave conforme catálogo SAT vigente."
+    ],
+    "example": "Si el emisor está en 601, no captures una clave de régimen distinta por defecto."
+  },
+  {
+    "code": "CFDI40150",
+    "topic": "Código postal",
+    "meaning": "El código postal del receptor o emisor no pasa validación.",
+    "why_it_happens": [
+      "Código postal no corresponde al dato fiscal registrado.",
+      "Se capturaron 4 dígitos o un valor fuera de catálogo."
+    ],
+    "how_to_fix": [
+      "Usa código postal de 5 dígitos válido.",
+      "Confirma CP de constancia fiscal del receptor."
+    ],
+    "example": "Si el cliente cambió domicilio fiscal, actualiza su CP antes de emitir CFDI 4.0."
+  },
+  {
+    "code": "CFDI40160",
+    "topic": "Moneda y tipo de cambio",
+    "meaning": "Moneda, tipo de cambio o importes son inconsistentes.",
+    "why_it_happens": [
+      "Moneda distinta de MXN sin tipo de cambio cuando aplica.",
+      "Tipo de cambio fuera del rango aceptado."
+    ],
+    "how_to_fix": [
+      "Captura tipo de cambio válido para moneda extranjera.",
+      "Valida montos e impuestos con la moneda correcta."
+    ],
+    "example": "En USD, incluye TipoCambio válido y verifica totales convertidos."
+  },
+  {
+    "code": "CFDI40166",
+    "topic": "Objeto de impuesto",
+    "meaning": "ObjetoImp no corresponde al tratamiento fiscal del concepto.",
+    "why_it_happens": [
+      "Se marcó objeto de impuesto incorrecto en conceptos.",
+      "No hay coherencia entre ObjetoImp e impuestos trasladados/retenidos."
+    ],
+    "how_to_fix": [
+      "Asigna ObjetoImp según si el concepto causa o no impuestos.",
+      "Alinea nodos de impuestos con el valor de ObjetoImp."
+    ],
+    "example": "Si un concepto no causa IVA, evita reportar traslado y usa ObjetoImp adecuado."
+  },
+  {
+    "code": "CFDI40171",
+    "topic": "Impuestos trasladados",
+    "meaning": "Los traslados de impuestos tienen datos inválidos o inconsistentes.",
+    "why_it_happens": [
+      "Base, tasa o importe no corresponden.",
+      "TipoFactor no coincide con la tasa reportada."
+    ],
+    "how_to_fix": [
+      "Recalcula traslado por concepto.",
+      "Verifica TipoFactor, TasaOCuota e Importe."
+    ],
+    "example": "Para IVA 16%, asegúrate de usar tasa 0.160000 y base correcta."
+  },
+  {
+    "code": "CFDI40172",
+    "topic": "Impuestos retenidos",
+    "meaning": "Las retenciones no cumplen validaciones del SAT/PAC.",
+    "why_it_happens": [
+      "Importe de retención mal calculado.",
+      "Clave de impuesto retenido no corresponde."
+    ],
+    "how_to_fix": [
+      "Revisa porcentaje de retención aplicable al concepto.",
+      "Confirma clave e importe en nodos de retenciones."
+    ],
+    "example": "Si retienes ISR, valida porcentaje y base antes de construir el XML."
+  },
+  {
+    "code": "CFDI40174",
+    "topic": "Relación CFDI",
+    "meaning": "La relación entre CFDI no es válida para el tipo de operación.",
+    "why_it_happens": [
+      "Se usa tipo de relación incorrecto.",
+      "UUID relacionado inexistente o no localizable."
+    ],
+    "how_to_fix": [
+      "Selecciona tipo de relación SAT correcto.",
+      "Verifica UUID del CFDI origen antes de timbrar."
+    ],
+    "example": "Para sustitución, usa relación adecuada y UUID del comprobante reemplazado."
+  },
+  {
+    "code": "CFDI40175",
+    "topic": "Complementos",
+    "meaning": "El complemento informado no cumple su estructura requerida.",
+    "why_it_happens": [
+      "Faltan nodos obligatorios del complemento.",
+      "Versión del complemento no coincide con la esperada."
+    ],
+    "how_to_fix": [
+      "Revisa guía de llenado del complemento correspondiente.",
+      "Asegura versión y nodos obligatorios completos."
+    ],
+    "example": "En complemento de pagos 2.0, valida Totales y DoctoRelacionado por cada UUID."
+  },
+  {
+    "code": "CFDI40179",
+    "topic": "Tipo de comprobante",
+    "meaning": "El tipo de comprobante no es compatible con los datos capturados.",
+    "why_it_happens": [
+      "Se marca tipo P con atributos de ingreso.",
+      "Uso CFDI o método de pago no coincide con tipo de comprobante."
+    ],
+    "how_to_fix": [
+      "Alinea TipoDeComprobante con el caso real (I, E, P, etc.).",
+      "Valida catálogos y reglas de negocio antes de timbrar."
+    ],
+    "example": "Para recibo de pago usa TipoDeComprobante=P y datos compatibles con complemento de pagos."
+  },
+  {
+    "code": "CFDI40200",
+    "topic": "Cancelación",
+    "meaning": "La cancelación del CFDI no procede por estatus o datos de relación.",
+    "why_it_happens": [
+      "Motivo de cancelación incorrecto.",
+      "No se informó folio sustituto cuando era obligatorio."
+    ],
+    "how_to_fix": [
+      "Selecciona motivo SAT correcto.",
+      "Incluye folio sustituto cuando aplique."
+    ],
+    "example": "Si cancelas por sustitución, emite el nuevo CFDI y relaciona correctamente ambos UUID."
+  },
+  {
+    "code": "CFDI40214",
+    "topic": "Complemento de pagos",
+    "meaning": "El complemento de pagos presenta inconsistencias de saldos o parcialidades.",
+    "why_it_happens": [
+      "NumParcialidad no consecutivo.",
+      "ImpSaldoAnt, ImpPagado e ImpSaldoInsoluto no cuadran."
+    ],
+    "how_to_fix": [
+      "Mantén consecutivo de parcialidades por documento relacionado.",
+      "Aplica la fórmula de saldos por cada pago registrado."
+    ],
+    "example": "Si saldo anterior es 10,000 y pagas 3,000, saldo insoluto debe ser 7,000."
+  },
+  {
+    "code": "CFDI40999",
+    "topic": "Error no mapeado",
+    "meaning": "Código de error SAT/PAC no catalogado todavía en la librería interna.",
+    "why_it_happens": [
+      "El PAC devolvió una regla específica no registrada.",
+      "La validación depende de reglas nuevas o personalizadas."
+    ],
+    "how_to_fix": [
+      "Consulta mensaje completo del PAC y XML emitido.",
+      "Valida campos obligatorios, catálogos y consistencia fiscal.",
+      "Documenta el caso para incorporarlo a la librería."
+    ],
+    "example": "Guarda XML rechazado, respuesta PAC y datos capturados para análisis y remediación."
+  }
+]
