@@ -40,7 +40,7 @@ export default function HomePage() {
               <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
                 Valida y corrige CFDI antes de timbrar
               </h1>
-              <p className="mt-4 max-w-2xl whitespace-pre-line text-base leading-relaxed text-slate-700 md:text-lg">
+              <p className="mt-5 max-w-2xl whitespace-pre-line text-lg leading-8 text-slate-700 md:text-xl">
                 Detecta errores del SAT en segundos y corrige XML automáticamente.
                 {"\n"}
                 Valida uno o cientos de XML en segundos.
@@ -61,7 +61,7 @@ export default function HomePage() {
                   Ver planes
                 </Link>
               </div>
-              <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+              <p className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">
                 5 validaciones gratis al día · No requiere tarjeta
               </p>
             </div>
@@ -138,7 +138,7 @@ export default function HomePage() {
               Disponible en Pro
             </span>
           </div>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sky-100">
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-sky-100">
             Sube decenas o cientos de XML y detecta errores del SAT
             automáticamente.
           </p>
@@ -162,7 +162,7 @@ export default function HomePage() {
           </div>
           <Link
             href="/pricing"
-            className="mt-6 inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-sky-900 transition hover:bg-sky-50"
+            className="mt-7 inline-flex items-center rounded-lg bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400"
           >
             Ver Pro
           </Link>
