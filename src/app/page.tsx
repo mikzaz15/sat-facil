@@ -2,60 +2,91 @@ import Link from "next/link";
 
 const FEATURES = [
   {
-    title: "Validación CFDI 4.0",
+    title: "Detecta errores CFDI",
     description:
-      "Revisa campos clave, coherencia entre catálogos SAT y configuraciones de timbrado antes de emitir.",
+      "Revisa configuraciones CFDI 4.0 y detecta inconsistencias antes de timbrar.",
   },
   {
-    title: "Explicación de errores SAT",
+    title: "Explica errores SAT",
     description:
-      "Ingresa el código de error y obtén una explicación clara con causa probable y acción recomendada.",
+      "Obtén una explicación clara de errores como CFDI40102 y cómo solucionarlos.",
   },
   {
-    title: "Corrección automática de XML",
+    title: "Corrige XML automáticamente",
     description:
-      "Detecta discrepancias comunes y genera propuesta de corrección lista para revisión y descarga.",
+      "Genera una propuesta de corrección lista para descargar.",
   },
 ];
 
 const STEPS = [
-  "Subir XML",
-  "Detectar error",
-  "Corregir",
-  "Descargar XML",
+  "Subir XML o lote",
+  "Detectar errores SAT",
+  "Corregir automáticamente",
+  "Descargar XML corregido",
 ];
+
+const COMMON_ERRORS = ["CFDI40102", "CFDI40138", "CFDI40148", "CFDI40160"];
 
 export default function HomePage() {
   return (
     <main className="bg-gradient-to-b from-slate-50 via-white to-sky-50/40">
-      <section className="mx-auto w-full max-w-6xl px-4 pb-14 pt-12 md:px-6 md:pt-16">
-        <div className="rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-sm backdrop-blur md:p-10">
-          <p className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
-            SAT Fácil para contadores
-          </p>
-          <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-            Valida y corrige CFDI antes de timbrar
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-700 md:text-lg">
-            Evita errores del SAT y rechazos del PAC en segundos.
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            Usado por contadores y despachos para prevenir rechazos del SAT.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href="/cfdi-xml-validator"
-              className="inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800"
-            >
-              Subir XML gratis
-            </Link>
-            <Link
-              href="/pricing"
-              className="inline-flex items-center px-1 py-2.5 text-sm font-medium text-slate-600 underline-offset-4 transition hover:text-slate-900 hover:underline"
-            >
-              Ver planes
-            </Link>
+      <section className="mx-auto w-full max-w-6xl px-4 pb-12 pt-12 md:px-6 md:pt-16">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+          <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-center">
+            <div>
+              <p className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
+                SAT Fácil para contadores
+              </p>
+              <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+                Valida y corrige CFDI antes de timbrar
+              </h1>
+              <p className="mt-4 max-w-2xl whitespace-pre-line text-base leading-relaxed text-slate-700 md:text-lg">
+                Detecta errores del SAT en segundos y corrige XML automáticamente.
+                {"\n"}
+                Valida uno o cientos de XML en segundos.
+                {"\n"}
+                Usado por contadores y despachos para evitar rechazos del PAC.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/cfdi-xml-validator"
+                  className="inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800"
+                >
+                  Subir XML gratis
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Ver planes
+                </Link>
+              </div>
+              <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                5 validaciones gratis al día · No requiere tarjeta
+              </p>
+            </div>
+
+            <aside className="rounded-2xl border border-sky-100 bg-sky-50/70 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-800">
+                Qué resuelve SAT Fácil
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                <li className="rounded-lg border border-sky-100 bg-white px-3 py-2">
+                  Detecta errores CFDI antes de timbrar
+                </li>
+                <li className="rounded-lg border border-sky-100 bg-white px-3 py-2">
+                  Corrige XML automáticamente
+                </li>
+                <li className="rounded-lg border border-sky-100 bg-white px-3 py-2">
+                  Procesa XML en lote para despachos
+                </li>
+              </ul>
+            </aside>
           </div>
+          <p className="mt-5 border-t border-slate-200 pt-4 text-sm text-slate-600">
+            Diseñado para contadores y despachos en México. Compatible con CFDI
+            4.0.
+          </p>
         </div>
       </section>
 
@@ -81,20 +112,60 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-semibold text-slate-900">Cómo funciona</h2>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
             {STEPS.map((step, index) => (
-              <div key={step} className="flex items-center gap-2">
-                <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1">
-                  {step}
-                </span>
-                {index < STEPS.length - 1 ? (
-                  <span className="text-slate-400" aria-hidden="true">
-                    →
-                  </span>
-                ) : null}
-              </div>
+              <article
+                key={step}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Paso {index + 1}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{step}</p>
+              </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-900 to-sky-800 p-6 text-sky-50 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-semibold text-white">
+              Procesa muchos CFDI en segundos
+            </h2>
+            <span className="rounded-full border border-sky-100/40 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-50">
+              Disponible en Pro
+            </span>
+          </div>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-sky-100">
+            Sube decenas o cientos de XML y detecta errores del SAT
+            automáticamente.
+          </p>
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-sky-100">
+            Ideal para despachos contables que revisan grandes volúmenes de
+            facturas.
+          </p>
+          <div className="mt-5 grid gap-2 text-sm text-slate-900 md:grid-cols-2">
+            <div className="rounded-lg border border-sky-200 bg-white px-3 py-2">
+              Subir lote de XML
+            </div>
+            <div className="rounded-lg border border-sky-200 bg-white px-3 py-2">
+              Detectar errores SAT
+            </div>
+            <div className="rounded-lg border border-sky-200 bg-white px-3 py-2">
+              Exportar resultados
+            </div>
+            <div className="rounded-lg border border-sky-200 bg-white px-3 py-2">
+              Descargar XML corregidos
+            </div>
+          </div>
+          <Link
+            href="/pricing"
+            className="mt-6 inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-sky-900 transition hover:bg-sky-50"
+          >
+            Ver Pro
+          </Link>
         </div>
       </section>
 
@@ -120,8 +191,9 @@ export default function HomePage() {
               <p className="mt-1 text-xs">Para despachos y operación diaria</p>
               <ul className="mt-3 space-y-1 text-sm">
                 <li>Validaciones ilimitadas</li>
+                <li>Procesamiento en lote (Lote XML)</li>
                 <li>Descarga de XML corregido</li>
-                <li>Asistente SAT y validación avanzada</li>
+                <li>Asistente SAT</li>
               </ul>
             </article>
           </div>
@@ -132,6 +204,28 @@ export default function HomePage() {
             >
               Comparar Free vs Pro
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Errores CFDI más comunes
+          </h2>
+          <p className="mt-2 text-sm text-slate-700">
+            Consulta guías rápidas para resolver errores SAT frecuentes.
+          </p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {COMMON_ERRORS.map((code) => (
+              <Link
+                key={code}
+                href={`/errores/${code}`}
+                className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 transition hover:border-sky-300 hover:bg-sky-100"
+              >
+                {code} · Ver explicación
+              </Link>
+            ))}
           </div>
         </div>
       </section>

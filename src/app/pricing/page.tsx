@@ -89,9 +89,9 @@ export default function PricingPage() {
             </div>
 
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
-              <li>5 validaciones CFDI por día</li>
-              <li>Validación manual de campos CFDI</li>
-              <li>Explicación base de errores SAT</li>
+              <li>5 validaciones CFDI por día para probar SAT Fácil</li>
+              <li>Validación base para detectar errores antes de timbrar</li>
+              <li>Explicación de errores SAT</li>
               <li>Vista previa de correcciones XML</li>
             </ul>
 
@@ -121,9 +121,9 @@ export default function PricingPage() {
 
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
               <li>Validaciones CFDI ilimitadas</li>
-              <li>Acceso completo a Validar XML CFDI</li>
+              <li>Procesamiento en lote (Lote XML)</li>
               <li>Descarga de XML corregido</li>
-              <li>Asistente SAT con contexto documental</li>
+              <li>Asistente SAT</li>
               <li>Flujo optimizado para despacho contable</li>
             </ul>
 

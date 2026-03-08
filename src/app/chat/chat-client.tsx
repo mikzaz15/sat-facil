@@ -26,6 +26,8 @@ type ChatClientProps = {
   initialQuestion: string;
 };
 
+type AssistantAccess = "unknown" | "logged_out" | "free" | "pro";
+
 export default function ChatClient({ initialQuestion }: ChatClientProps) {
   const [userId, setUserId] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -33,9 +35,12 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [accessError, setAccessError] = useState("");
+  const [assistantAccess, setAssistantAccess] = useState<AssistantAccess>("unknown");
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const quickActions = ["Dame pasos", "Haz checklist", "Genera mensaje"];
+  const isAssistantLocked =
+    assistantAccess === "logged_out" || assistantAccess === "free";
 
   const startUpgradeCheckout = useCallback(async () => {
     setCheckoutLoading(true);
@@ -96,6 +101,44 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
   }, []);
 
   useEffect(() => {
+    let active = true;
+
+    async function loadEntitlements() {
+      try {
+        const response = await fetch("/api/sat/entitlements");
+        if (!active) return;
+
+        if (response.status === 401) {
+          setAssistantAccess("logged_out");
+          setAccessError("Inicia sesión para usar el Asistente SAT.");
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          ok: boolean;
+          data?: { canUseSatAssistant?: boolean };
+        };
+
+        if (payload.ok && payload.data?.canUseSatAssistant) {
+          setAssistantAccess("pro");
+          return;
+        }
+
+        setAssistantAccess("free");
+        setAccessError("El Asistente SAT está disponible solo en Plan Pro.");
+      } catch {
+        if (!active) return;
+        setAssistantAccess("unknown");
+      }
+    }
+
+    void loadEntitlements();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       setUserId(getOrCreateLocalUserId());
       setSessionId(getOrCreateLocalSessionId());
@@ -121,6 +164,14 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
     async (rawMessage?: string) => {
       const message = (rawMessage ?? input).trim();
       if (!message || !userId || !sessionId || loading) {
+        return;
+      }
+      if (assistantAccess === "logged_out") {
+        setAccessError("Inicia sesión para usar el Asistente SAT.");
+        return;
+      }
+      if (assistantAccess === "free") {
+        setAccessError("El Asistente SAT está disponible solo en Plan Pro.");
         return;
       }
 
@@ -193,7 +244,7 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
       setLoading(false);
       void loadHistory(userId);
     },
-    [input, userId, sessionId, loading, loadHistory],
+    [assistantAccess, input, userId, sessionId, loading, loadHistory],
   );
 
   return (
@@ -207,20 +258,23 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             <p>{accessError}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Link
-                href="/login?next=/chat"
-                className="rounded-md border border-amber-400 px-2 py-1 font-medium text-amber-900 hover:bg-amber-100"
-              >
-                Iniciar sesión
-              </Link>
-              <button
-                type="button"
-                onClick={() => void startUpgradeCheckout()}
-                disabled={checkoutLoading}
-                className="rounded-md bg-sky-700 px-2 py-1 font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {checkoutLoading ? "Abriendo Stripe..." : "Mejorar a Pro ($9/mes)"}
-              </button>
+              {assistantAccess === "logged_out" ? (
+                <Link
+                  href="/login?next=/chat"
+                  className="rounded-md border border-amber-400 px-2 py-1 font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Iniciar sesión
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void startUpgradeCheckout()}
+                  disabled={checkoutLoading}
+                  className="rounded-md bg-sky-700 px-2 py-1 font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {checkoutLoading ? "Abriendo Stripe..." : "Mejorar a Pro ($9/mes)"}
+                </button>
+              )}
             </div>
           </div>
         ) : null}
@@ -234,6 +288,7 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
               key={action}
               type="button"
               onClick={() => void sendMessage(action)}
+              disabled={isAssistantLocked}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-50"
             >
               {action}
@@ -270,12 +325,13 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="Escribe tu duda fiscal..."
+              disabled={isAssistantLocked}
               className="h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none ring-sky-200 focus:ring"
             />
             <button
               type="button"
               onClick={() => void sendMessage()}
-              disabled={loading}
+              disabled={loading || isAssistantLocked}
               className="w-full rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {loading ? "Enviando..." : "Enviar"}
