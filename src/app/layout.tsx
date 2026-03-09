@@ -23,10 +23,10 @@ export default async function RootLayout({
   const navLinks: Array<{ href: string; label: string }> = [];
   let authHref = "/login";
   let authLabel = "Iniciar sesión";
+  navLinks.push({ href: "/", label: "Inicio" });
 
   if (!user) {
     navLinks.push(
-      { href: "/", label: "Inicio" },
       { href: "/cfdi-xml-validator", label: "Validar XML" },
       { href: "/cfdi-error-explainer", label: "Errores SAT" },
       { href: "/pricing", label: "Planes" },
