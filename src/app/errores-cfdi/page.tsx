@@ -50,7 +50,14 @@ export default function ErroresCfdiPage() {
               key={item.code}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
-              <h2 className="text-lg font-semibold text-slate-900">{item.code}</h2>
+              <h2 className="text-lg font-semibold text-slate-900">
+                <Link
+                  href={`/errores-sat/${item.code.toLowerCase()}`}
+                  className="hover:text-sky-700"
+                >
+                  {item.code}
+                </Link>
+              </h2>
               <div className="mt-3 space-y-3 text-sm text-slate-700">
                 <div>
                   <p className="font-semibold text-slate-900">Descripción</p>
@@ -65,6 +72,12 @@ export default function ErroresCfdiPage() {
                   <p>{item.solution}</p>
                 </div>
               </div>
+              <Link
+                href={`/errores-sat/${item.code.toLowerCase()}`}
+                className="mt-4 inline-flex items-center text-sm font-semibold text-sky-700 hover:text-sky-800"
+              >
+                Ver detalle SEO de {item.code}
+              </Link>
             </article>
           ))}
         </section>
@@ -82,6 +95,32 @@ export default function ErroresCfdiPage() {
           >
             Ver precios
           </Link>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Explora más errores SAT
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/errores-sat/cfdi40138"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              CFDI40138
+            </Link>
+            <Link
+              href="/errores-sat/cfdi40103"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              CFDI40103
+            </Link>
+            <Link
+              href="/errores-sat/cfdi40221"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              CFDI40221
+            </Link>
+          </div>
         </section>
       </div>
     </main>
