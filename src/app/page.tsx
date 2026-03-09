@@ -199,7 +199,7 @@ export default function HomePage() {
           </div>
           <div className="mt-6">
             <Link
-              href="/pricing"
+              href="/precios"
               className="inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
             >
               Comparar Free vs Pro
@@ -239,6 +239,18 @@ export default function HomePage() {
             </Link>
             <Link href="/cfdi-xml-validator" className="hover:text-slate-900">
               Validar XML CFDI
+            </Link>
+            <Link href="/validar-xml" className="hover:text-slate-900">
+              Guía Validar XML
+            </Link>
+            <Link href="/lote-xml" className="hover:text-slate-900">
+              Lote XML
+            </Link>
+            <Link href="/precios" className="hover:text-slate-900">
+              Precios
+            </Link>
+            <Link href="/contacto" className="hover:text-slate-900">
+              Contacto
             </Link>
             <Link href="/cfdi-error-explainer" className="hover:text-slate-900">
               Explicar error SAT

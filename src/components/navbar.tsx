@@ -21,7 +21,8 @@ export async function Navbar() {
     navLinks.push(
       { href: "/cfdi-xml-validator", label: "Validar XML" },
       { href: "/cfdi-error-explainer", label: "Errores SAT" },
-      { href: "/pricing", label: "Planes" },
+      { href: "/precios", label: "Precios" },
+      { href: "/contacto", label: "Contacto" },
     );
   } else {
     authHref = "/cuenta";
@@ -45,12 +46,14 @@ export async function Navbar() {
         { href: "/cfdi-batch-validator", label: "Lote XML" },
         { href: "/cfdi-error-explainer", label: "Errores SAT" },
         { href: "/chat", label: "Asistente SAT" },
+        { href: "/contacto", label: "Contacto" },
       );
     } else {
       navLinks.push(
         { href: "/cfdi-xml-validator", label: "Validar XML" },
         { href: "/cfdi-error-explainer", label: "Errores SAT" },
-        { href: "/pricing", label: "Planes" },
+        { href: "/precios", label: "Precios" },
+        { href: "/contacto", label: "Contacto" },
       );
     }
   }
