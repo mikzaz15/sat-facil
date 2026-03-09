@@ -20,7 +20,6 @@ export async function Navbar() {
   if (!user) {
     navLinks.push(
       { href: "/validar-xml", label: "Validador XML" },
-      { href: "/cfdi-xml-validator", label: "Validar XML" },
       { href: "/cfdi-error-explainer", label: "Errores SAT" },
       { href: "/precios", label: "Precios" },
       { href: "/contacto", label: "Contacto" },
@@ -44,7 +43,6 @@ export async function Navbar() {
     if (isProUser) {
       navLinks.push(
         { href: "/validar-xml", label: "Validador XML" },
-        { href: "/cfdi-xml-validator", label: "Validar XML" },
         { href: "/cfdi-batch-validator", label: "Lote XML" },
         { href: "/cfdi-error-explainer", label: "Errores SAT" },
         { href: "/chat", label: "Asistente SAT" },
@@ -54,7 +52,6 @@ export async function Navbar() {
     } else {
       navLinks.push(
         { href: "/validar-xml", label: "Validador XML" },
-        { href: "/cfdi-xml-validator", label: "Validar XML" },
         { href: "/cfdi-error-explainer", label: "Errores SAT" },
         { href: "/precios", label: "Precios" },
         { href: "/contacto", label: "Contacto" },

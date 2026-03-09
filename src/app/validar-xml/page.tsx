@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CfdiXmlValidatorPage from "@/app/cfdi-xml-validator/page";
+import CfdiXmlValidatorTool from "@/components/sat/cfdi-xml-validator-tool";
 
 const HIGHLIGHTS = [
   "Qué valida SAT Fácil",
@@ -81,7 +81,7 @@ export default function ValidarXmlMarketingPage() {
             desde esta página.
           </p>
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <CfdiXmlValidatorPage />
+            <CfdiXmlValidatorTool />
           </div>
         </section>
       </div>

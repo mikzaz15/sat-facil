@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CfdiBatchValidatorPage from "@/app/cfdi-batch-validator/page";
+import CfdiBatchValidatorTool from "@/components/sat/cfdi-batch-validator-tool";
 
 const BENEFITS = [
   {
@@ -78,7 +78,7 @@ export default function LoteXmlPage() {
             solo flujo.
           </p>
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <CfdiBatchValidatorPage />
+            <CfdiBatchValidatorTool />
           </div>
         </section>
       </div>
