@@ -9,6 +9,48 @@ export const runtime = "nodejs";
 
 type StripeIdValue = string | { id: string } | null | undefined;
 
+function isDuplicateKeyError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  return code === "23505";
+}
+
+async function hasProcessedWebhookEvent(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  eventId: string;
+}): Promise<boolean> {
+  const { data, error } = await params.supabase
+    .from("stripe_webhook_events")
+    .select("event_id")
+    .eq("event_id", params.eventId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Could not check webhook idempotency: ${error.message}`);
+  }
+
+  return Boolean(data?.event_id);
+}
+
+async function markWebhookEventProcessed(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  eventId: string;
+}): Promise<"inserted" | "already_processed"> {
+  const { error } = await params.supabase.from("stripe_webhook_events").insert({
+    event_id: params.eventId,
+  });
+
+  if (!error) {
+    return "inserted";
+  }
+
+  if (isDuplicateKeyError(error)) {
+    return "already_processed";
+  }
+
+  throw new Error(`Could not persist webhook idempotency marker: ${error.message}`);
+}
+
 function stringId(value: StripeIdValue): string {
   if (!value) return "";
   if (typeof value === "string") return value;
@@ -287,6 +329,27 @@ export async function POST(request: Request) {
   }
 
   const supabase = createSupabaseServerClient();
+  const eventId = event.id?.trim();
+  if (!eventId) {
+    return NextResponse.json(
+      { ok: false, error: "Missing Stripe event id." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const alreadyProcessed = await hasProcessedWebhookEvent({
+      supabase,
+      eventId,
+    });
+    if (alreadyProcessed) {
+      return NextResponse.json({ received: true, already_processed: true });
+    }
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Webhook idempotency check error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 
   if (
     event.type === "checkout.session.completed" ||
@@ -343,6 +406,19 @@ export async function POST(request: Request) {
       const message = error instanceof Error ? error.message : "Webhook error";
       return NextResponse.json({ ok: false, error: message }, { status: 500 });
     }
+  }
+
+  try {
+    await markWebhookEventProcessed({
+      supabase,
+      eventId,
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Webhook idempotency persistence error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
