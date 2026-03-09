@@ -111,7 +111,7 @@ export default function PreciosPage() {
                 Plan Pro
               </p>
               <h2 className="text-2xl font-semibold text-slate-900">Pro</h2>
-              <p className="text-sm text-slate-700">$9 USD / mes</p>
+              <p className="text-sm text-slate-700">$150 MXN / mes</p>
             </div>
 
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
