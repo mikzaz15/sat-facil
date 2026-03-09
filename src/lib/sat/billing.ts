@@ -124,21 +124,7 @@ export async function getSatEntitlements(
   userId: string,
 ): Promise<SatEntitlements> {
   const subscription = await ensureSatSubscriptionRow(supabase, userId);
-  const { startIso, endIso } = todayUtcRange();
-
-  const usage = await supabase
-    .from("analytics_events")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("event_name", "validation_run")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (usage.error) {
-    throw new Error(`Could not read SAT daily usage: ${usage.error.message}`);
-  }
-
-  const validationsUsedToday = toValidationCount(usage.count);
+  const validationsUsedToday = await countDailyValidationUsage(supabase, userId);
   const isPro = isProFromSubscription({
     plan: subscription.plan,
     status: subscription.status,
@@ -207,6 +193,13 @@ export async function incrementValidationUsage(
     throw new Error(`Could not log validation usage: ${insert.error.message}`);
   }
 
+  return countDailyValidationUsage(supabase, userId);
+}
+
+async function countDailyValidationUsage(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
   const { startIso, endIso } = todayUtcRange();
   const usage = await supabase
     .from("validation_logs")

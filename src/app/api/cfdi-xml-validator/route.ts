@@ -104,14 +104,24 @@ export async function POST(request: Request) {
       validation: result,
     });
 
-    await logValidationAnalyticsEvents({
-      supabase,
-      userId: user.id,
-      sourcePage,
-      mode: "xml",
-      plan: access.entitlements.plan,
-      validation: result,
-    });
+    try {
+      await logValidationAnalyticsEvents({
+        supabase,
+        userId: user.id,
+        sourcePage,
+        mode: "xml",
+        plan: access.entitlements.plan,
+        validation: result,
+      });
+    } catch (analyticsError: unknown) {
+      const message =
+        analyticsError instanceof Error
+          ? analyticsError.message
+          : "unknown analytics error";
+      console.error(
+        `[SAT][ANALYTICS] Failed to log validation events: ${message}`,
+      );
+    }
 
     await incrementValidationUsage(supabase, user.id, "xml");
     const entitlements = await getSatEntitlements(supabase, user.id);
