@@ -63,20 +63,45 @@ const FAQ = [
   },
 ];
 
-function getScreenshotFiles(): string[] {
-  const screenshotsDir = path.join(process.cwd(), "public", "screenshots");
-  if (!fs.existsSync(screenshotsDir)) return [];
+type WorkflowScreenshot = {
+  step: string;
+  title: string;
+  fileName: string;
+};
 
-  const allowedExtensions = new Set([".png", ".jpg", ".jpeg", ".webp"]);
-  return fs
-    .readdirSync(screenshotsDir)
-    .filter((name) => allowedExtensions.has(path.extname(name).toLowerCase()))
-    .sort()
-    .slice(0, 3);
+const SCREENSHOT_WORKFLOW: WorkflowScreenshot[] = [
+  {
+    step: "Paso 1",
+    title: "Subir XML",
+    fileName: "validator-upload.png",
+  },
+  {
+    step: "Paso 2",
+    title: "Detectar errores",
+    fileName: "validator-error.png",
+  },
+  {
+    step: "Paso 3",
+    title: "Corregir antes de timbrar",
+    fileName: "validator-correction.png",
+  },
+  {
+    step: "Paso 4",
+    title: "Validar en lote",
+    fileName: "validator-batch.png",
+  },
+];
+
+function getWorkflowScreenshots(): Array<WorkflowScreenshot & { exists: boolean }> {
+  const screenshotsDir = path.join(process.cwd(), "public", "screenshots");
+  return SCREENSHOT_WORKFLOW.map((item) => ({
+    ...item,
+    exists: fs.existsSync(path.join(screenshotsDir, item.fileName)),
+  }));
 }
 
 export default function HomePage() {
-  const screenshots = getScreenshotFiles();
+  const screenshots = getWorkflowScreenshots();
 
   return (
     <main className="bg-gradient-to-b from-slate-50 via-white to-sky-50/40">
@@ -94,7 +119,7 @@ export default function HomePage() {
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
-              href="/cfdi-xml-validator"
+              href="/validar-xml"
               className="inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800"
             >
               Probar Gratis
@@ -137,7 +162,7 @@ export default function HomePage() {
             </p>
           </div>
           <Link
-            href="/cfdi-xml-validator"
+            href="/validar-xml"
             className="mt-5 inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
           >
             Ir al validador XML
@@ -187,33 +212,72 @@ export default function HomePage() {
             Así funciona SAT Fácil
           </h2>
           <p className="mt-2 text-sm text-slate-700">
-            Vista general del flujo de validación y revisión antes del timbrado.
+            Flujo completo para revisar CFDI antes de timbrar y reducir rechazos.
           </p>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {screenshots.length > 0
-              ? screenshots.map((file) => (
-                  <div
-                    key={file}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
-                  >
-                    <Image
-                      src={`/screenshots/${file}`}
-                      alt={`Pantalla SAT Fácil ${file}`}
-                      width={1200}
-                      height={700}
-                      className="h-40 w-full object-cover"
-                    />
-                  </div>
-                ))
-              : [1, 2, 3].map((slot) => (
-                  <div
-                    key={slot}
-                    className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"
-                  >
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {screenshots.map((item) => (
+              <article
+                key={item.fileName}
+                className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+              >
+                <div className="border-b border-slate-200 bg-white px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    {item.step}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{item.title}</p>
+                </div>
+                {item.exists ? (
+                  <Image
+                    src={`/screenshots/${item.fileName}`}
+                    alt={`${item.title} en SAT Fácil`}
+                    width={1200}
+                    height={700}
+                    className="h-44 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-44 items-center justify-center border-t border-dashed border-slate-300 text-sm text-slate-500">
                     Screenshot próximamente
                   </div>
-                ))}
+                )}
+              </article>
+            ))}
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Empieza a validar CFDI hoy
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
+            Detecta errores SAT antes de timbrar y reduce rechazos del PAC.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/validar-xml"
+              className="inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
+            >
+              Probar validador XML
+            </Link>
+            <Link
+              href="/precios"
+              className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              Ver precios
+            </Link>
+          </div>
+          <p className="mt-3 text-sm text-slate-700">
+            También puedes explorar{" "}
+            <Link href="/lote-xml" className="font-medium text-sky-700 underline">
+              validación en lote
+            </Link>{" "}
+            y la{" "}
+            <Link href="/errores-sat" className="font-medium text-sky-700 underline">
+              biblioteca de errores SAT
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
@@ -288,6 +352,9 @@ export default function HomePage() {
             </Link>
             <Link href="/ayuda" className="hover:text-slate-900">
               Ayuda
+            </Link>
+            <Link href="/guias" className="hover:text-slate-900">
+              Guías
             </Link>
           </div>
         </div>
