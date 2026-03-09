@@ -13,6 +13,7 @@ export async function Navbar() {
   const navLinks: Array<{ href: string; label: string }> = [];
   let authHref = "/login";
   let authLabel = "Iniciar sesión";
+  let isProUser = false;
 
   navLinks.push({ href: "/", label: "Inicio" });
 
@@ -31,14 +32,14 @@ export async function Navbar() {
       .select("plan,status")
       .eq("user_id", user.id)
       .maybeSingle();
-    const isPro =
+    isProUser =
       !subscription.error &&
       isProFromSubscription({
         plan: (subscription.data?.plan ?? "free") === "pro" ? "pro" : "free",
         status: subscription.data?.status ?? "inactive",
       });
 
-    if (isPro) {
+    if (isProUser) {
       navLinks.push(
         { href: "/cfdi-xml-validator", label: "Validar XML" },
         { href: "/cfdi-batch-validator", label: "Lote XML" },
@@ -71,12 +72,19 @@ export async function Navbar() {
             </Link>
           ))}
         </div>
-        <Link
-          href={authHref}
-          className="ml-auto rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
-        >
-          {authLabel}
-        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          {isProUser ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+              PRO
+            </span>
+          ) : null}
+          <Link
+            href={authHref}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+          >
+            {authLabel}
+          </Link>
+        </div>
       </nav>
     </header>
   );
