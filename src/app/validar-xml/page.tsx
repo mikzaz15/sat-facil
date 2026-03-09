@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CfdiXmlValidatorTool from "@/components/sat/cfdi-xml-validator-tool";
 
@@ -12,6 +13,12 @@ const TRUST_BULLETS = [
   "Validación en segundos",
   "Sin registro requerido",
 ];
+
+export const metadata: Metadata = {
+  title: "Validador XML CFDI 4.0 Gratis | SAT Fácil",
+  description:
+    "Sube tu XML, detecta errores SAT antes de timbrar y revisa compatibilidad CFDI 4.0 con SAT Fácil.",
+};
 
 export default function ValidarXmlMarketingPage() {
   return (

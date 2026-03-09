@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CfdiBatchValidatorTool from "@/components/sat/cfdi-batch-validator-tool";
 
@@ -18,6 +19,12 @@ const BENEFITS = [
       "Obtén visibilidad rápida de errores para priorizar correcciones.",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Validación de XML en Lote | SAT Fácil",
+  description:
+    "Procesa múltiples XML CFDI en lote, detecta errores SAT y acelera la revisión operativa para contadores y despachos.",
+};
 
 export default function LoteXmlPage() {
   return (

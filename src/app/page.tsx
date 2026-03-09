@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -62,6 +63,12 @@ const FAQ = [
     answer: "Sí, con el plan Pro.",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "SAT Fácil | Valida CFDI y detecta errores SAT en segundos",
+  description:
+    "Valida XML CFDI 4.0, detecta errores SAT antes de timbrar y reduce rechazos del PAC con SAT Fácil.",
+};
 
 type WorkflowScreenshot = {
   step: string;
