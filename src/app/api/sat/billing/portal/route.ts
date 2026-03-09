@@ -4,24 +4,45 @@ import { getStripeServerClient } from "@/lib/stripe";
 import { getAuthenticatedUser } from "@/lib/supabase/current-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function getPortalReturnUrl(request: Request): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) {
-    return `${configured.replace(/\/+$/, "")}/cuenta`;
-  }
+function toAbsoluteSiteUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
 
-  const requestUrl = new URL(request.url);
-  if (
-    requestUrl.hostname === "localhost" ||
-    requestUrl.hostname === "127.0.0.1"
-  ) {
-    return `${requestUrl.protocol}//${requestUrl.host}/cuenta`;
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return "";
+    }
+    return parsed.origin;
+  } catch {
+    return "";
   }
-
-  return "https://www.satfacil.com.mx/cuenta";
 }
 
-export async function GET(request: Request) {
+function getPortalReturnUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteOrigin = configured ? toAbsoluteSiteUrl(configured) : "";
+  const candidate = siteOrigin
+    ? `${siteOrigin.replace(/\/+$/, "")}/cuenta`
+    : "https://www.satfacil.com.mx/cuenta";
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("invalid protocol");
+    }
+    return parsed.toString();
+  } catch {
+    throw new Error(
+      "Invalid Stripe billing portal return URL. Set NEXT_PUBLIC_SITE_URL to a valid absolute URL.",
+    );
+  }
+}
+
+export async function GET() {
   try {
     const user = await getAuthenticatedUser();
     if (!user) {
@@ -58,9 +79,10 @@ export async function GET(request: Request) {
     }
 
     const stripe = getStripeServerClient();
+    const returnUrl = getPortalReturnUrl();
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: getPortalReturnUrl(request),
+      return_url: returnUrl,
     });
 
     return NextResponse.redirect(session.url, { status: 303 });
