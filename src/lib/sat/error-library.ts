@@ -392,6 +392,10 @@ export function listSatCfdiErrorCodes(): string[] {
   return Object.values(satCfdiErrorDictionary).map((entry) => entry.code);
 }
 
+export function listSatCfdiErrorContents(): SatCfdiErrorContent[] {
+  return [...RAW_SAT_CFDI_ERRORS];
+}
+
 export function listSatCfdiErrorCodesForStaticPages(limit = 20): string[] {
   return listSatCfdiErrorCodes().slice(0, Math.max(0, limit));
 }

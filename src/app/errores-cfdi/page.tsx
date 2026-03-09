@@ -40,7 +40,12 @@ export default function ErroresCfdiPage() {
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-slate-700 md:text-base">
             Conoce los errores CFDI más frecuentes, sus causas comunes y cómo
-            resolverlos antes de timbrar tus comprobantes.
+            resolverlos antes de timbrar tus comprobantes. También puedes
+            consultar el{" "}
+            <Link href="/errores-sat" className="font-medium text-sky-700 underline">
+              directorio completo de errores SAT
+            </Link>
+            .
           </p>
         </header>
 

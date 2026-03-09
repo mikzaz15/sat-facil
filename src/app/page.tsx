@@ -280,6 +280,9 @@ export default function HomePage() {
             <Link href="/errores-cfdi" className="hover:text-slate-900">
               Errores CFDI
             </Link>
+            <Link href="/errores-sat" className="hover:text-slate-900">
+              Biblioteca errores SAT
+            </Link>
             <Link href="/integraciones" className="hover:text-slate-900">
               Integraciones
             </Link>
