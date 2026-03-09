@@ -17,9 +17,21 @@ type LoginPageProps = {
   }>;
 };
 
+function isSignupConfirmationMessage(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === "cuenta creada. confirma tu correo antes de iniciar sesión." ||
+    normalized === "cuenta creada. confirma tu correo antes de iniciar sesion."
+  );
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextCandidate = typeof params.next === "string" ? params.next.trim() : "";
+  const rawError = typeof params.error === "string" ? params.error.trim() : "";
+  const showSignupConfirmation = rawError
+    ? isSignupConfirmationMessage(rawError)
+    : false;
   const nextPath =
     isSafeInternalPath(nextCandidate) &&
     nextCandidate !== "/app" &&
@@ -41,10 +53,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           SAT y usar el asistente.
         </p>
 
-        {params.error ? (
-          <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {params.error}
-          </p>
+        {rawError ? (
+          showSignupConfirmation ? (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              <p className="font-semibold">Cuenta creada correctamente.</p>
+              <p className="mt-1">
+                Te enviamos un enlace de verificación a tu correo. Confirma tu
+                correo para poder iniciar sesión.
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {rawError}
+            </p>
+          )
         ) : null}
 
         <div className="mt-6">
