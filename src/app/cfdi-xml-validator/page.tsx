@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { formatCorrectedXmlOutput } from "@/lib/sat/xml-format";
 
 type ValidationIssue = {
@@ -56,6 +56,14 @@ type XmlFixLogPayload = {
     };
   };
   entitlements?: {
+    isPro?: boolean;
+    canUseXmlValidator?: boolean;
+  };
+};
+
+type EntitlementsPayload = {
+  ok: boolean;
+  data?: {
     isPro?: boolean;
     canUseXmlValidator?: boolean;
   };
@@ -413,6 +421,44 @@ export default function CfdiXmlValidatorPage() {
   const [correctedXml, setCorrectedXml] = useState("");
   const [extracted, setExtracted] = useState<ExtractedCfdi>(EMPTY_EXTRACTED);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [bannerPlanState, setBannerPlanState] = useState<
+    "unknown" | "logged_out" | "free" | "pro"
+  >("unknown");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadEntitlements() {
+      try {
+        const response = await fetch("/api/sat/entitlements");
+        if (!active) return;
+
+        if (response.status === 401) {
+          setBannerPlanState("logged_out");
+          return;
+        }
+
+        const payload = (await response.json()) as EntitlementsPayload;
+        if (payload.ok && payload.data) {
+          const isPro = Boolean(
+            payload.data.isPro ?? payload.data.canUseXmlValidator ?? false,
+          );
+          setBannerPlanState(isPro ? "pro" : "free");
+          return;
+        }
+
+        setBannerPlanState("unknown");
+      } catch {
+        if (!active) return;
+        setBannerPlanState("unknown");
+      }
+    }
+
+    void loadEntitlements();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const hasExtractedCoreFields = useMemo(() => {
     return (
@@ -545,6 +591,14 @@ export default function CfdiXmlValidatorPage() {
             false,
         ),
       );
+      if (apiPayload.data.entitlements) {
+        const isPro = Boolean(
+          apiPayload.data.entitlements.isPro ??
+            apiPayload.data.entitlements.canUseXmlValidator ??
+            false,
+        );
+        setBannerPlanState(isPro ? "pro" : "free");
+      }
     } catch {
       setValidation(null);
       setCanCorrectXml(false);
@@ -694,24 +748,31 @@ export default function CfdiXmlValidatorPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 px-4 py-3">
           <p className="text-xs leading-relaxed text-slate-700 md:text-sm">
-            Plan Gratis: validación y vista previa de corrección. Plan Pro:
-            descarga de XML corregido y flujo completo de corrección.
+            {bannerPlanState === "pro"
+              ? "Plan actual: Pro. Descarga de XML corregido habilitada."
+              : bannerPlanState === "free"
+                ? "Plan actual: Free. Puedes validar y ver vista previa de corrección."
+                : "Plan Gratis: validación y vista previa de corrección. Plan Pro: descarga de XML corregido y flujo completo de corrección."}
           </p>
           <div className="flex items-center gap-2">
-            <Link
-              href="/login?next=/cfdi-xml-validator"
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-white"
-            >
-              Iniciar sesión
-            </Link>
-            <button
-              type="button"
-              onClick={() => void startUpgradeCheckout()}
-              disabled={checkoutLoading}
-              className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
-              {checkoutLoading ? "Abriendo Stripe..." : "Activar Plan Pro ($9/mes)"}
-            </button>
+            {bannerPlanState === "logged_out" ? (
+              <Link
+                href="/login?next=/cfdi-xml-validator"
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-white"
+              >
+                Iniciar sesión
+              </Link>
+            ) : null}
+            {bannerPlanState === "logged_out" || bannerPlanState === "free" ? (
+              <button
+                type="button"
+                onClick={() => void startUpgradeCheckout()}
+                disabled={checkoutLoading}
+                className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {checkoutLoading ? "Abriendo Stripe..." : "Activar Plan Pro ($9/mes)"}
+              </button>
+            ) : null}
           </div>
         </div>
 
