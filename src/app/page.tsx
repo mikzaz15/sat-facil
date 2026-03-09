@@ -253,6 +253,25 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Pensado para contadores y equipos fiscales
+          </h2>
+          <ul className="mt-4 space-y-2 text-sm text-slate-700">
+            <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              • Compatible con CFDI 4.0
+            </li>
+            <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              • Detecta errores SAT comunes antes del timbrado
+            </li>
+            <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              • Reduce rechazos del PAC
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
         <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-sm">
           <h2 className="text-2xl font-semibold text-slate-900">
             Empieza a validar CFDI hoy
@@ -333,36 +352,51 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-slate-200 bg-white/80">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-slate-600 md:flex-row md:items-center md:justify-between md:px-6">
-          <p>SAT Fácil · Validación CFDI para contadores en México</p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/validar-xml" className="hover:text-slate-900">
-              Validar XML
-            </Link>
-            <Link href="/lote-xml" className="hover:text-slate-900">
-              Lote XML
-            </Link>
-            <Link href="/precios" className="hover:text-slate-900">
-              Precios
-            </Link>
-            <Link href="/contacto" className="hover:text-slate-900">
-              Contacto
-            </Link>
-            <Link href="/errores-cfdi" className="hover:text-slate-900">
-              Errores CFDI
-            </Link>
-            <Link href="/errores-sat" className="hover:text-slate-900">
-              Biblioteca errores SAT
-            </Link>
-            <Link href="/integraciones" className="hover:text-slate-900">
-              Integraciones
-            </Link>
-            <Link href="/ayuda" className="hover:text-slate-900">
-              Ayuda
-            </Link>
-            <Link href="/guias" className="hover:text-slate-900">
-              Guías
-            </Link>
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-slate-600 md:px-6">
+          <p className="mb-6">SAT Fácil · Validación CFDI para contadores en México</p>
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">
+                Producto
+              </p>
+              <div className="flex flex-col gap-1">
+                <Link href="/validar-xml" className="hover:text-slate-900">
+                  Validador XML
+                </Link>
+                <Link href="/lote-xml" className="hover:text-slate-900">
+                  Validador en lote
+                </Link>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">
+                Recursos
+              </p>
+              <div className="flex flex-col gap-1">
+                <Link href="/errores-sat" className="hover:text-slate-900">
+                  Errores SAT
+                </Link>
+                <Link href="/guias" className="hover:text-slate-900">
+                  Guías
+                </Link>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">
+                Empresa
+              </p>
+              <div className="flex flex-col gap-1">
+                <Link href="/precios" className="hover:text-slate-900">
+                  Precios
+                </Link>
+                <Link href="/contacto" className="hover:text-slate-900">
+                  Contacto
+                </Link>
+                <Link href="/ayuda" className="hover:text-slate-900">
+                  Ayuda
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

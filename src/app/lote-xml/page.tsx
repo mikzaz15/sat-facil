@@ -21,9 +21,9 @@ const BENEFITS = [
 ];
 
 export const metadata: Metadata = {
-  title: "Validación de XML en Lote | SAT Fácil",
+  title: "Validador CFDI en Lote | SAT Fácil",
   description:
-    "Procesa múltiples XML CFDI en lote, detecta errores SAT y acelera la revisión operativa para contadores y despachos.",
+    "Valida múltiples XML CFDI en lote y revisa errores SAT en segundos con SAT Fácil.",
 };
 
 export default function LoteXmlPage() {
@@ -74,6 +74,22 @@ export default function LoteXmlPage() {
               </p>
             </article>
           ))}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Valida múltiples CFDI en lote
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-700">
+            Sube varios archivos XML y revisa rápidamente errores SAT en cada
+            factura.
+          </p>
+          <Link
+            href="/validar-xml"
+            className="mt-4 inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+          >
+            Probar validador individual
+          </Link>
         </section>
 
         <section id="lote-validator" className="scroll-mt-24">

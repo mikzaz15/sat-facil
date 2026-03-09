@@ -15,9 +15,9 @@ const TRUST_BULLETS = [
 ];
 
 export const metadata: Metadata = {
-  title: "Validador XML CFDI 4.0 Gratis | SAT Fácil",
+  title: "Validador XML CFDI 4.0 | SAT Fácil",
   description:
-    "Sube tu XML, detecta errores SAT antes de timbrar y revisa compatibilidad CFDI 4.0 con SAT Fácil.",
+    "Valida tu XML CFDI 4.0 y detecta errores SAT antes de timbrar con SAT Fácil.",
 };
 
 export default function ValidarXmlMarketingPage() {
@@ -82,7 +82,28 @@ export default function ValidarXmlMarketingPage() {
         </section>
 
         <section id="validador" className="scroll-mt-24">
-          <h2 className="text-2xl font-semibold text-slate-900">Sube tu XML</h2>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900">
+              Valida tu CFDI antes de timbrar
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">
+              Sube tu archivo XML y SAT Fácil revisará automáticamente errores
+              comunes del SAT antes de enviarlo al PAC.
+            </p>
+            <ol className="mt-4 grid gap-2 text-sm text-slate-700 md:grid-cols-3">
+              <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="font-semibold text-slate-900">1.</span> Subir XML CFDI
+              </li>
+              <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="font-semibold text-slate-900">2.</span> Detectar errores SAT
+              </li>
+              <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="font-semibold text-slate-900">3.</span> Corregir antes de timbrar
+              </li>
+            </ol>
+          </div>
+
+          <h2 className="mt-6 text-2xl font-semibold text-slate-900">Sube tu XML</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
             Usa la herramienta de validación para analizar tu CFDI directamente
             desde esta página.
