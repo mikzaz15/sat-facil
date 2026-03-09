@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { isProFromSubscription } from "@/lib/sat/billing";
 import { createSupabaseServerAuthClient } from "@/lib/supabase/auth-server";
 
+import { BillingPortalButton } from "./billing-portal-button";
 import { logoutFromAccountAction } from "./actions";
 
 export default async function CuentaPage() {
@@ -66,6 +67,12 @@ export default async function CuentaPage() {
             {!subscription.error && subscriptionStatus ? (
               <p className="mt-1 text-xs text-slate-500">Estado: {subscriptionStatus}</p>
             ) : null}
+            <p className="mt-2 text-xs text-slate-500">
+              Soporte de suscripción:{" "}
+              <a href="mailto:billing@satfacil.com.mx" className="underline">
+                billing@satfacil.com.mx
+              </a>
+            </p>
           </div>
         </div>
 
@@ -78,12 +85,7 @@ export default async function CuentaPage() {
           </Link>
 
           {canManageBilling ? (
-            <Link
-              href="/api/sat/billing/portal"
-              className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50"
-            >
-              Administrar suscripción
-            </Link>
+            <BillingPortalButton className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50" />
           ) : null}
 
           <form action={logoutFromAccountAction}>

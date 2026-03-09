@@ -353,7 +353,12 @@ export default function HomePage() {
 
       <footer className="border-t border-slate-200 bg-white/80">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-slate-600 md:px-6">
-          <p className="mb-6">SAT Fácil · Validación CFDI para contadores en México</p>
+          <p className="mb-6">
+            SAT Fácil · Validación CFDI para contadores en México · Soporte:{" "}
+            <a href="mailto:support@satfacil.com.mx" className="underline">
+              support@satfacil.com.mx
+            </a>
+          </p>
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">

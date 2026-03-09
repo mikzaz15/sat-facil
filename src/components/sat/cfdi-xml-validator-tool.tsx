@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { formatCorrectedXmlOutput } from "@/lib/sat/xml-format";
+import { trackGaEvent } from "@/lib/ga";
 
 type ValidationIssue = {
   code: string;
@@ -472,6 +473,9 @@ export default function CfdiXmlValidatorPage() {
   }, [extracted]);
 
   async function startUpgradeCheckout() {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/cfdi-xml-validator",
+    });
     setCheckoutLoading(true);
     setApiError("");
 
@@ -490,6 +494,9 @@ export default function CfdiXmlValidatorPage() {
           return;
         }
 
+      trackGaEvent("checkout_started", {
+        source_page: "/cfdi-xml-validator",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setApiError("Error de conexión al iniciar el pago.");
@@ -499,6 +506,10 @@ export default function CfdiXmlValidatorPage() {
   }
 
   async function runValidation(payload: ExtractedCfdi) {
+    trackGaEvent("xml_validation_started", {
+      source_page: "/cfdi-xml-validator",
+      mode: "xml",
+    });
     setLoading(true);
     setApiError("");
     setFreeLimitReached(false);
@@ -541,6 +552,9 @@ export default function CfdiXmlValidatorPage() {
           apiPayload.code === "FREE_LIMIT_REACHED" ||
           apiPayload.error === "free_limit_reached"
         ) {
+          trackGaEvent("free_limit_reached", {
+            source_page: "/cfdi-xml-validator",
+          });
           setFreeLimitReached(true);
           setApiError(
             apiPayload.message ||
@@ -569,6 +583,14 @@ export default function CfdiXmlValidatorPage() {
         setCorrectedXml("");
         setPreviewMode(true);
         setPreviewSummary(apiPayload.data.validation_summary);
+        trackGaEvent("xml_validation_completed", {
+          source_page: "/cfdi-xml-validator",
+          mode: "xml",
+          preview_mode: true,
+          status: apiPayload.data.validation_summary.status,
+          errors_count: apiPayload.data.validation_summary.errors_count,
+          warnings_count: apiPayload.data.validation_summary.warnings_count,
+        });
         return;
       }
 
@@ -584,6 +606,14 @@ export default function CfdiXmlValidatorPage() {
       setValidation(apiPayload.data.validation);
       setPreviewMode(false);
       setPreviewSummary(null);
+      trackGaEvent("xml_validation_completed", {
+        source_page: "/cfdi-xml-validator",
+        mode: "xml",
+        preview_mode: false,
+        is_valid: apiPayload.data.validation.is_valid,
+        errors_count: apiPayload.data.validation.errors.length,
+        warnings_count: apiPayload.data.validation.warnings.length,
+      });
       setCanCorrectXml(
         Boolean(
           apiPayload.data.entitlements?.isPro ??

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { trackGaEvent } from "@/lib/ga";
+
 const FAQ_ITEMS = [
   {
     question: "¿El plan Gratis requiere tarjeta?",
@@ -36,6 +38,9 @@ export default function PreciosPage() {
   const [error, setError] = useState("");
 
   async function startUpgradeCheckout() {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/precios",
+    });
     setLoading(true);
     setError("");
     try {
@@ -53,6 +58,9 @@ export default function PreciosPage() {
         return;
       }
 
+      trackGaEvent("checkout_started", {
+        source_page: "/precios",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setError("Error de conexión con Stripe. Intenta nuevamente.");

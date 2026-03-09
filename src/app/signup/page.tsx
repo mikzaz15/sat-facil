@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthFormGaTracker } from "@/components/analytics/auth-form-ga-tracker";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 
 import { signupAction } from "./actions";
@@ -48,7 +49,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         ) : null}
 
         <div className="mt-6">
-          <GoogleAuthButton errorPath="/signup" />
+          <GoogleAuthButton errorPath="/signup" gaEventName="sign_up" />
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -57,7 +58,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <span className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <form action={signupAction} className="mt-4 space-y-4">
+        <form id="signup-form" action={signupAction} className="mt-4 space-y-4">
           <input type="hidden" name="next" value={nextPath} />
           <div>
             <label
@@ -115,6 +116,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             Crear cuenta
           </button>
         </form>
+        <AuthFormGaTracker formId="signup-form" eventName="sign_up" />
 
         <p className="mt-6 text-sm text-slate-600">
           ¿Ya tienes una cuenta?{" "}

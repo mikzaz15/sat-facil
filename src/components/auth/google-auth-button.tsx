@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { trackGaEvent } from "@/lib/ga";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const DEFAULT_NEXT_PATH = "/validate-cfdi";
@@ -9,15 +10,21 @@ const DEFAULT_NEXT_PATH = "/validate-cfdi";
 type GoogleAuthButtonProps = {
   className?: string;
   errorPath?: "/login" | "/signup";
+  gaEventName?: "login" | "sign_up";
 };
 
 export function GoogleAuthButton({
   className,
   errorPath = "/login",
+  gaEventName = "login",
 }: GoogleAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleGoogleAuth() {
+    trackGaEvent(gaEventName, {
+      method: "google_oauth",
+      source_page: errorPath,
+    });
     setIsLoading(true);
 
     const supabase = createSupabaseBrowserClient();

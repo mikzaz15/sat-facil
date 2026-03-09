@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { trackGaEvent } from "@/lib/ga";
+
 export default function PricingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +34,9 @@ export default function PricingPage() {
   }
 
   async function startUpgradeCheckout() {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/pricing",
+    });
     setLoading(true);
     setError("");
     try {
@@ -53,6 +58,9 @@ export default function PricingPage() {
         return;
       }
 
+      trackGaEvent("checkout_started", {
+        source_page: "/pricing",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setError("Error de conexión con el pago de Stripe.");

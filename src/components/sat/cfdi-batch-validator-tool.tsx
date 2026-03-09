@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from "react";
 
+import { trackGaEvent } from "@/lib/ga";
 import { trackSatAnalyticsEvent } from "@/lib/sat/analytics-client";
 
 type SatEntitlements = {
@@ -213,6 +214,9 @@ export default function CfdiBatchValidatorPage() {
   }, []);
 
   async function startUpgradeCheckout() {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/cfdi-batch-validator",
+    });
     setCheckoutLoading(true);
     setError("");
     try {
@@ -228,6 +232,9 @@ export default function CfdiBatchValidatorPage() {
         setError(payload.error || "No se pudo iniciar el pago de Stripe.");
         return;
       }
+      trackGaEvent("checkout_started", {
+        source_page: "/cfdi-batch-validator",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setError("Error de conexión al iniciar el pago.");
@@ -357,6 +364,10 @@ export default function CfdiBatchValidatorPage() {
 
     setValidating(true);
     setError("");
+    trackGaEvent("batch_validation_started", {
+      source_page: "/cfdi-batch-validator",
+      file_count: uploadedFiles.length,
+    });
     try {
       await trackSatAnalyticsEvent({
         event_name: "batch_validation_run",

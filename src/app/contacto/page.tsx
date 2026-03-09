@@ -88,8 +88,25 @@ export default function ContactoPage() {
             <h2 className="text-lg font-semibold text-slate-900">Información de contacto</h2>
             <div className="mt-3 space-y-2 text-sm text-slate-700">
               <p>
-                <span className="font-medium text-slate-900">Correo:</span>{" "}
-                contacto@satfacil.com.mx
+                <span className="font-medium text-slate-900">Soporte:</span>{" "}
+                <a href="mailto:support@satfacil.com.mx" className="underline">
+                  support@satfacil.com.mx
+                </a>
+              </p>
+              <p>
+                <span className="font-medium text-slate-900">Facturación:</span>{" "}
+                <a href="mailto:billing@satfacil.com.mx" className="underline">
+                  billing@satfacil.com.mx
+                </a>
+              </p>
+              <p>
+                <span className="font-medium text-slate-900">
+                  Avisos del sistema:
+                </span>{" "}
+                <a href="mailto:no-reply@satfacil.com.mx" className="underline">
+                  no-reply@satfacil.com.mx
+                </a>{" "}
+                <span className="text-xs text-slate-500">(solo envío, no monitoreado)</span>
               </p>
               <p className="text-slate-600">
                 Horario de atención: lunes a viernes, 9:00 a 18:00 (hora CDMX).

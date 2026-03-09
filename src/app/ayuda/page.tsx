@@ -67,6 +67,31 @@ export default function AyudaPage() {
             </article>
           ))}
         </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Canales de soporte</h2>
+          <div className="mt-3 space-y-1.5 text-sm text-slate-700">
+            <p>
+              Soporte general:{" "}
+              <a href="mailto:support@satfacil.com.mx" className="underline">
+                support@satfacil.com.mx
+              </a>
+            </p>
+            <p>
+              Facturación y suscripciones:{" "}
+              <a href="mailto:billing@satfacil.com.mx" className="underline">
+                billing@satfacil.com.mx
+              </a>
+            </p>
+            <p>
+              Avisos automáticos del sistema:{" "}
+              <a href="mailto:no-reply@satfacil.com.mx" className="underline">
+                no-reply@satfacil.com.mx
+              </a>{" "}
+              <span className="text-xs text-slate-500">(correo saliente)</span>
+            </p>
+          </div>
+        </section>
       </div>
     </main>
   );

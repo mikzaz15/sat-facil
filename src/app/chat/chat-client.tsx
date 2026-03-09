@@ -8,6 +8,7 @@ import {
   getOrCreateLocalUserId,
   setCurrentSessionId,
 } from "@/lib/sat/client";
+import { trackGaEvent } from "@/lib/ga";
 
 type UiMessage = {
   id: string;
@@ -43,6 +44,9 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
     assistantAccess === "logged_out" || assistantAccess === "free";
 
   const startUpgradeCheckout = useCallback(async () => {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/chat",
+    });
     setCheckoutLoading(true);
     setAccessError("");
     try {
@@ -60,6 +64,9 @@ export default function ChatClient({ initialQuestion }: ChatClientProps) {
         return;
       }
 
+      trackGaEvent("checkout_started", {
+        source_page: "/chat",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setAccessError("Error de conexión al iniciar el pago.");

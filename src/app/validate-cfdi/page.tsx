@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+
+import { trackGaEvent } from "@/lib/ga";
 
 type ValidationIssue = {
   code: string;
@@ -131,6 +133,7 @@ function parseCfdiXml(xmlText: string): ValidationInput {
 }
 
 export default function ValidateCfdiPage() {
+  const hasTrackedCheckoutCompleted = useRef(false);
   const [mode, setMode] = useState<ValidationMode>("xml");
   const [form, setForm] = useState<ValidationInput>(INITIAL_FORM);
   const [xmlFields, setXmlFields] = useState<ValidationInput>(EMPTY_XML);
@@ -180,7 +183,23 @@ export default function ValidateCfdiPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (hasTrackedCheckoutCompleted.current) return;
+    if (typeof window === "undefined") return;
+
+    const billing = new URLSearchParams(window.location.search).get("billing");
+    if (billing !== "success") return;
+
+    hasTrackedCheckoutCompleted.current = true;
+    trackGaEvent("checkout_completed", {
+      source_page: "/validate-cfdi",
+    });
+  }, []);
+
   async function startUpgradeCheckout() {
+    trackGaEvent("upgrade_clicked", {
+      source_page: "/validate-cfdi",
+    });
     setCheckoutLoading(true);
     setError("");
     try {
@@ -198,6 +217,9 @@ export default function ValidateCfdiPage() {
         return;
       }
 
+      trackGaEvent("checkout_started", {
+        source_page: "/validate-cfdi",
+      });
       window.location.href = payload.data.checkout_url;
     } catch {
       setError("Error de conexión al iniciar el pago.");
@@ -207,6 +229,10 @@ export default function ValidateCfdiPage() {
   }
 
   async function runValidation(input: ValidationInput) {
+    trackGaEvent("xml_validation_started", {
+      source_page: "/validate-cfdi",
+      mode,
+    });
     setLoading(true);
     setError("");
     setFreeLimitReached(false);
@@ -248,6 +274,10 @@ export default function ValidateCfdiPage() {
         }
 
         if (payload.code === "FREE_LIMIT_REACHED") {
+          trackGaEvent("free_limit_reached", {
+            source_page: "/validate-cfdi",
+            mode,
+          });
           setFreeLimitReached(true);
           setError(
             payload.message ||
@@ -257,6 +287,10 @@ export default function ValidateCfdiPage() {
         }
 
         if (payload.error === "free_limit_reached") {
+          trackGaEvent("free_limit_reached", {
+            source_page: "/validate-cfdi",
+            mode,
+          });
           setFreeLimitReached(true);
           setError(
             payload.message ||
@@ -274,6 +308,13 @@ export default function ValidateCfdiPage() {
         setEntitlements(payload.data.entitlements);
       }
       setValidation(payload.data.validation);
+      trackGaEvent("xml_validation_completed", {
+        source_page: "/validate-cfdi",
+        mode,
+        is_valid: payload.data.validation.is_valid,
+        errors_count: payload.data.validation.errors.length,
+        warnings_count: payload.data.validation.warnings.length,
+      });
     } catch {
       setValidation(null);
       setError("Error de conexión con /api/cfdi-validate.");

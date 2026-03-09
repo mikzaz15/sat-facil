@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthFormGaTracker } from "@/components/analytics/auth-form-ga-tracker";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 
 import { loginAction } from "./actions";
@@ -70,7 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : null}
 
         <div className="mt-6">
-          <GoogleAuthButton errorPath="/login" />
+          <GoogleAuthButton errorPath="/login" gaEventName="login" />
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -79,7 +80,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <span className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <form action={loginAction} className="mt-4 space-y-4">
+        <form id="login-form" action={loginAction} className="mt-4 space-y-4">
           <input type="hidden" name="next" value={nextPath} />
 
           <div>
@@ -121,6 +122,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Iniciar sesión
           </button>
         </form>
+        <AuthFormGaTracker formId="login-form" eventName="login" />
 
         <p className="mt-6 text-sm text-slate-600">
           ¿Nuevo en SAT Fácil?{" "}
