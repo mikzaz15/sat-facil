@@ -1,25 +1,21 @@
 import Link from "next/link";
+import CfdiBatchValidatorPage from "@/app/cfdi-batch-validator/page";
 
 const BENEFITS = [
   {
-    title: "Sube múltiples XML",
+    title: "Validación masiva",
     description:
-      "Carga varios CFDI en una sola operación para revisión rápida sin validar archivo por archivo.",
+      "Sube múltiples XML y revisa resultados en una sola corrida.",
   },
   {
-    title: "Procesa en segundos",
+    title: "Ahorro de tiempo para contadores",
     description:
-      "Obtén resultados consolidados para detectar errores SAT más rápido en flujos de alto volumen.",
+      "Reduce trabajo manual y acelera el control de calidad previo al timbrado.",
   },
   {
-    title: "Exporta resultados",
+    title: "Diagnóstico inmediato",
     description:
-      "Comparte hallazgos con tu equipo contable y prioriza correcciones críticas.",
-  },
-  {
-    title: "Ideal para contadores y despachos",
-    description:
-      "Diseñado para despachos que administran múltiples clientes y cierres con tiempos exigentes.",
+      "Obtén visibilidad rápida de errores para priorizar correcciones.",
   },
 ];
 
@@ -37,18 +33,18 @@ export default function LoteXmlPage() {
             </span>
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-            Validación de XML en lote
+            Valida múltiples XML CFDI en lote
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-slate-700 md:text-base">
-            Automatiza la revisión de muchos CFDI en una sola corrida. Ideal para
-            despachos y empresas que necesitan velocidad, control y trazabilidad.
+            Sube varios XML y obtén un diagnóstico rápido para revisar múltiples
+            CFDI antes del timbrado.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Link
-              href="/cfdi-batch-validator"
+              href="#lote-validator"
               className="inline-flex items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-800"
             >
-              Probar lote XML
+              Probar validación en lote
             </Link>
             <Link
               href="/precios"
@@ -71,6 +67,19 @@ export default function LoteXmlPage() {
               </p>
             </article>
           ))}
+        </section>
+
+        <section id="lote-validator" className="scroll-mt-24">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Probar validación en lote
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
+            Accede a la herramienta de lote para procesar múltiples XML desde un
+            solo flujo.
+          </p>
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <CfdiBatchValidatorPage />
+          </div>
         </section>
       </div>
     </main>
